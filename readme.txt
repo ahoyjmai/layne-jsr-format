@@ -3,6 +3,7 @@
    Script last updated 9 Aug 2019.
 
    This script reformats the JSR and adds extra calculations and comments.
+   Source code available: https://github.com/ahoyjmai/layne-jsr-format.git
 
    User will need to provide 2 JSR files from Power BI, found here:
       https://app.powerbi.com
