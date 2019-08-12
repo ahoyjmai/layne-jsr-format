@@ -27,6 +27,7 @@ Version_Number = "Version v1.3"
 
 # v1.3
 # various directory related bugs fixed. Pyinstaller is able to turn this into EXE file.
+# Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 # v1.2
 # recovered from accidental deletion of conditional formatting, although it does not handle edge cases yet.
