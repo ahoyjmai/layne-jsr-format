@@ -203,6 +203,9 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
         proceed=input()
         
         if proceed=="":
+                print ()
+                print ("MACRO STARTED.")
+                print ("PLEASE DO NOT TOUCH MOUSE AND KEYBOARD.")
                 if focus_window(savefilename):
                         time.sleep(1)
                         move_to_last_worksheet()
@@ -212,7 +215,7 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
                                 add_formatting()
                                 move_down_right(2,0)
                                 go_back_x_sheets(1)
-                        time.sleep(1)
+                        time.sleep(7)
                         ctrl_s_to_save()
                         print("Finshed, you can use the keyboard and mouse now")
                         time.sleep(3)
@@ -221,5 +224,6 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
                         print("Could not find excel window named",savefilename,". Cancelling Macro.")
         else:
                 print("You have chosen to cancel the macro.")
+        print()
         print("You can use the keyboard and mouse now")
         

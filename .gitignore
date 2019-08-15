@@ -4,6 +4,7 @@ build/
 dist
 old files folder (not needed for script)/
 JSRformatter.spec
+__pycache__
 
 # Compiled source #
 ###################
