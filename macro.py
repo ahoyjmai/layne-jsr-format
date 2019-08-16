@@ -3,7 +3,7 @@ import win32gui # to switch windows
 import os
 import time
 
-pyautogui.PAUSE=0.02    # standard delay in seconds, pyautogui automatically delays this long after each 
+pyautogui.PAUSE=0.03    # standard delay in seconds, pyautogui automatically delays this long after each 
 
 def move_to_last_worksheet():
         pyautogui.keyDown('ctrl')
@@ -211,11 +211,14 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
                         move_to_last_worksheet()
                         go_back_x_sheets(3)
                         for k in range(7):      #do this 7 times because there are 7 sheets that need formatting
+                                print("Starting sheet #",k,"...",end="")
                                 add_subtotals()
                                 add_formatting()
                                 move_down_right(2,0)
                                 go_back_x_sheets(1)
-                        time.sleep(7)
+                                print("Finished sheet.")
+                                time.sleep(3)
+                        time.sleep(3)
                         ctrl_s_to_save()
                         print("Finshed, you can use the keyboard and mouse now")
                         time.sleep(3)
