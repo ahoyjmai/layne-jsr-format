@@ -154,7 +154,14 @@ def focus_window(key="jsr"):
                         win32gui.ShowWindow(i[0],5)
                         win32gui.SetForegroundWindow(i[0])
                         return True
-
+        for i in top_windows:
+                if key.lower()[:-5] in i[1].lower():
+#                        print("I found",key.lower(),"in", i[1].lower())
+                        #print (i)
+                        win32gui.ShowWindow(i[0],5)
+                        win32gui.SetForegroundWindow(i[0])
+                        return True
+                
         #for i in top_windows:
                 #if key.lower() in i[1].lower() and "excel" in i[1].lower():
                         
@@ -224,7 +231,7 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
                         time.sleep(3)
                         alt_tab()
                 else:
-                        print("Could not find excel window named",savefilename,". Cancelling Macro.")
+                        print("Could not find excel window named",savefilename[:-5],". Cancelling Macro.")
         else:
                 print("You have chosen to cancel the macro.")
         print()

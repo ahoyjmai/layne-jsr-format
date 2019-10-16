@@ -27,6 +27,9 @@ Version_Number = "Version v1.3"
 
 # v1.3
 # various directory related bugs fixed. Pyinstaller is able to turn this into EXE file.
+# Use cmd to go to the directory, and then enter: pyinstaller --onefile JSRformatter.py
+# exe will be placed in dist folder
+
 # Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 # v1.2
@@ -234,6 +237,7 @@ def main():
                 clean_sales_vs_billings_values(row)
                 mark_large_POC_receivables(row)
                 mark_billings_over_contract_value(row)
+                mark_actual_cost_over_billings_by_a_lot(row)
                 add_number_formatting(row,HEADERMAP)
                 #mark_billings_not_proportional_to_Cost(row)
                 
@@ -529,9 +533,20 @@ def mark_billings_over_contract_value(row):
                                 commenttext = "Billings greater than Contract Value"
                                 row[xcol("F")].comment = Comment(commenttext,"JMai")
                                 row[xcol("F")].fill = Redfillstyle
-                return True
+                        return True
         else: return False
-        
+
+def mark_actual_cost_over_billings_by_a_lot(row):
+        # Y is billings, O is actual Total Cost
+        Cost_Threshold=50000 #ignore unless cost is over billings by a lot, otherwise everything gets flagged
+        if row[xcol("Y")].value and row[xcol("O")].value:
+                if row[xcol("Y")].value + Cost_Threshold < row[xcol("O")].value:
+                        commenttext = "Actual Cost exceeds Billings by over $50k"
+                        row[xcol("Y")].comment = Comment(commenttext,"JMai")
+                        row[xcol("Y")].fill = Redfillstyle
+                        return True
+        else: return False
+
 def add_number_formatting(row,headermap):
         for i,cell in enumerate(row):
                 cell.number_format = headermap[i][1]
