@@ -538,10 +538,10 @@ def mark_billings_over_contract_value(row):
 
 def mark_actual_cost_over_billings_by_a_lot(row):
         # Y is billings, O is actual Total Cost
-        Cost_Threshold=50000 #ignore unless cost is over billings by a lot, otherwise everything gets flagged
+        Cost_Threshold=15000 #ignore unless cost is over billings by a lot, otherwise everything gets flagged
         if row[xcol("Y")].value and row[xcol("O")].value:
                 if row[xcol("Y")].value + Cost_Threshold < row[xcol("O")].value:
-                        commenttext = "Actual Cost exceeds Billings by over $50k"
+                        commenttext = "Actual Cost exceeds Billings by over $15k"
                         row[xcol("Y")].comment = Comment(commenttext,"JMai")
                         row[xcol("Y")].fill = Redfillstyle
                         return True
