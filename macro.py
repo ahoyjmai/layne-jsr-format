@@ -2,6 +2,7 @@ import pyautogui # for keyboard macro control
 import win32gui # to switch windows
 import os
 import time
+import sys
 
 pyautogui.PAUSE=0.03    # standard delay in seconds, pyautogui automatically delays this long after each 
 
@@ -147,31 +148,47 @@ def focus_window(key="jsr"):
         results = []
         top_windows = []
         win32gui.EnumWindows(windowEnumerationHandler, top_windows)
+        key2="xls"
+        key3="excel"
         for i in top_windows:
                 if key.lower() in i[1].lower():
-#                        print("I found",key.lower(),"in", i[1].lower())
-                        #print (i)
-                        win32gui.ShowWindow(i[0],5)
-                        win32gui.SetForegroundWindow(i[0])
-                        return True
-        for i in top_windows:
+                        if key2 in i[1].lower() or key3 in i[1].lower():
+                                #print("I found",key.lower(),"in", i[1].lower())
+                                #print (i)
+                                win32gui.ShowWindow(i[0],3)
+                                try: win32gui.SetForegroundWindow(i[0])
+                                except: return False
+                                return True
+        # if you couldn't find the full file name, drop the last 5 characters.
+        # just in case different PC's drop the word "excel" from the window name
+        for i in top_windows:   
                 if key.lower()[:-5] in i[1].lower():
-#                        print("I found",key.lower(),"in", i[1].lower())
+                        #print("I found",key.lower(),"in", i[1].lower())
                         #print (i)
-                        win32gui.ShowWindow(i[0],5)
-                        win32gui.SetForegroundWindow(i[0])
+                        win32gui.ShowWindow(i[0],3)
+                        try: win32gui.SetForegroundWindow(i[0])
+                        except: return False
                         return True
-                
-        #for i in top_windows:
-                #if key.lower() in i[1].lower() and "excel" in i[1].lower():
-                        
-                 #       break
-                        #win32gui.ShowWindow(i[0],5)
-                        #win32gui.SetForegroundWindow(i[0])
-                        #return True
                         
         return False
 
+def KEYBOARD_MACRO_START():
+        time.sleep(1)
+        move_to_last_worksheet()
+        go_back_x_sheets(3)
+        for k in range(7):      #do this 7 times because there are 7 sheets that need formatting
+                print("Starting sheet #",k,"...",end="")
+                add_subtotals()
+                add_formatting()
+                print("Finished sheet.")
+                move_down_right(2,0)
+                go_back_x_sheets(1)
+                time.sleep(2)
+        time.sleep(3)
+        ctrl_s_to_save()
+        print("Finished, you can use the keyboard and mouse now!")
+        time.sleep(3)
+        alt_tab()
         
                 
 def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the default value, this is just for debugging
@@ -183,57 +200,52 @@ def AUTOMATE_EXCEL_FORMATTING (completefilepath,savefilename):      # delete the
                 
                 os.startfile(filename)
                 print ("complete.")
+                print ("Now opening new excel file.")
         except:
                 print ("\nError loading excel file.")
                 return
 
-        #wait 10 seconds for window to load, or you can wait for user input.
+        #wait 5 seconds for window to load, or you can wait for user input.
         #waiting seems to be better
         
         time.sleep(5)
         
-        #confirmtext="Please wait until excel file opens. \n Then click OK to start macro. Or click cancel to stop the script.\n\nIf you need to stop the macro in case of emergency, quickly move the mouse to the far corner of your computer screen"
-        #title="Start JSR Macro?"
-        #proceed=pyautogui.confirm(confirmtext,title,buttons=['OK','Cancel']).lower()
-        #focus_window(title)   # i'm not sure this actually focuses the pop up at all.
-        print("--------------------------------------------------------------------------")
-        print()
-        print ("The next part of the script will activate a macro which will:")
-        print ("    1) Open excel on your computer")
-        print ("    2) Take over your keyboard and mouse.")
-        print ("Do not touch keyboard and mouse while the macro is running.")
+        print ("--------------------------------------------------------------------------")
         print ()
-        print ("If you need to stop the macro in case of emergency, quickly move the mouse to the far corner of your computer screen")
+        print ("When you are ready, the computer will control the mouse & keyboard.")
+        print ("Once you hit 'ENTER' you have 10 seconds to:")
+        print ("    1) Make sure the new JSR excel file is in front.")
+        print ("    2) Confirm the excel window receives keyboard commands (ex: try pressing the arrow keys to see if it responds.")
+        
+        print ("If you need to emergency stop the macro, rapidly move the mouse to the far corner of the computer screen")
+        print ("Otherwise, avoid using keyboard and mouse for a minute while the macro is running.")
         print ()
-        print ("Once excel has loaded, press 'ENTER' to run the macro")
-        print ("If you want to skip the macro, press Ctrl-C")
+        
+        print ()
+        print ("Press 'ENTER' to run the macro. Press Ctrl-C to cancel.")
         proceed=input()
         
         if proceed=="":
-                print ()
-                print ("MACRO STARTED.")
-                print ("PLEASE DO NOT TOUCH MOUSE AND KEYBOARD.")
-                if focus_window(savefilename):
+                focus_window(savefilename)
+                print ("YOU HAVE 10 SECONDS TO MAKE SURE JSR EXCEL WINDOW IS IN FRONT AND RECEIVING KEYBOARD COMMANDS.")
+                print ("Macro starts in: ",end="")
+                time.sleep(1)
+                for cnt in range(10):
+                        sys.stdout.write(str(10-cnt)+',')
+                        sys.stdout.flush()
                         time.sleep(1)
-                        move_to_last_worksheet()
-                        go_back_x_sheets(3)
-                        for k in range(7):      #do this 7 times because there are 7 sheets that need formatting
-                                print("Starting sheet #",k,"...",end="")
-                                add_subtotals()
-                                add_formatting()
-                                move_down_right(2,0)
-                                go_back_x_sheets(1)
-                                print("Finished sheet.")
-                                time.sleep(3)
-                        time.sleep(3)
-                        ctrl_s_to_save()
-                        print("Finshed, you can use the keyboard and mouse now")
-                        time.sleep(3)
-                        alt_tab()
-                else:
-                        print("Could not find excel window named",savefilename[:-5],". Cancelling Macro.")
+
+                print ()
+                print ("--------------------------------------------------------------------------")
+                print ("MACRO STARTED.")
+                print ("PLEASE DO NOT USE MOUSE AND KEYBOARD.")
+                KEYBOARD_MACRO_START()
+                #if focus_window(savefilename):
+                        #KEYBOARD_MACRO_START()
+                #else:
+                        #print("Could not find excel window named",savefilename[:-5],". Cancelling Macro.")
         else:
                 print("You have chosen to cancel the macro.")
         print()
-        print("You can use the keyboard and mouse now")
+        print("You can use the keyboard and mouse now.")
         

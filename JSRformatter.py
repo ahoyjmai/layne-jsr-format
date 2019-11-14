@@ -20,8 +20,8 @@ output_dir = "../output"
 # equations are hard-coded in HEADERMAP
 #
 # Written by Jonathan Mai on 8/7/2019
-Last_Updated = "Last Updated 8/9/2019"
-Version_Number = "Version v1.3"
+Last_Updated = "Last Updated 11/14/2019"
+Version_Number = "Version v1.4"
 
 # version Notes
 
@@ -489,6 +489,7 @@ def get_timestamp_str(filepath, worksheet):
         return a
 
 Redfillstyle = PatternFill(start_color='FF7D7D',fill_type = "solid")
+Pinkfillstyle = PatternFill(start_color='FFAFAF',fill_type = "solid")
 
 def mark_if_actual_cost_is_greater_than_forecasted_cost(row):
         # O is actual cost, N is Forecasted cost
@@ -526,26 +527,49 @@ def mark_large_POC_receivables(row):
         return False
         
 def mark_billings_over_contract_value(row):
-        # Y is billings, F is contract Value
+
+        # Two levels of highlight. Light Red level 1, Dark Red level 2
+        # Level 1: mark if est sales < actual cost * 1.22
+        # Level 2: mark if est sales < billings (This one is more important, highlight this one if you have to choose)
+
+        # Y is billings, F is contract Value, O is actual Total Cost
         if row[xcol("Y")].value and row[xcol("F")].value:
                 if row[xcol("F")].value > 5:     #ignore if contract value is tiny
                         if row[xcol("Y")].value > row[xcol("F")].value:
-                                commenttext = "Billings greater than Contract Value"
+                                commenttext = "Billings exceed Contract Value. Possible change order needed."
                                 row[xcol("F")].comment = Comment(commenttext,"JMai")
                                 row[xcol("F")].fill = Redfillstyle
-                        return True
+                                return True
+                        elif row[xcol("O")].value *1.22 > row[xcol("F")].value:
+                                commenttext = "Actual Costs exceed Contract Value by 22%. Possible change order needed."
+                                row[xcol("F")].comment = Comment(commenttext,"JMai")
+                                row[xcol("F")].fill = Pinkfillstyle
+                                return True
         else: return False
 
 def mark_actual_cost_over_billings_by_a_lot(row):
+        
+        # Two levels of highlight. Light Red level 1, Dark Red level 2
+        # Level 1: mark if cost * 125% > billings
+        # Level 2: mark if cost > billings + 15000 (This one is more important, highlight this one if you have to choose)
+        
         # Y is billings, O is actual Total Cost
         Cost_Threshold=15000 #ignore unless cost is over billings by a lot, otherwise everything gets flagged
+        Cost_Perc_Threshold=1.25
+        
         if row[xcol("Y")].value and row[xcol("O")].value:
-                if row[xcol("Y")].value + Cost_Threshold < row[xcol("O")].value:
-                        commenttext = "Actual Cost exceeds Billings by over $15k"
-                        row[xcol("Y")].comment = Comment(commenttext,"JMai")
-                        row[xcol("Y")].fill = Redfillstyle
-                        return True
-        else: return False
+                if row[xcol("O")].value > 100 :    # ignore if cost is tiny, less than 100
+                        if row[xcol("O")].value > row[xcol("Y")].value + Cost_Threshold:
+                                commenttext = "Actual Cost exceeds Total Billings by over $15k"
+                                row[xcol("Y")].comment = Comment(commenttext,"JMai")
+                                row[xcol("Y")].fill = Redfillstyle
+                                return True
+                        elif row[xcol("O")].value * Cost_Perc_Threshold > row[xcol("Y")].value :
+                                commenttext = "Actual Cost exceeds 80% of Total Billings"
+                                row[xcol("Y")].comment = Comment(commenttext,"JMai")
+                                row[xcol("Y")].fill = Pinkfillstyle
+                                return True
+        return False
 
 def add_number_formatting(row,headermap):
         for i,cell in enumerate(row):
