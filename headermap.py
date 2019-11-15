@@ -12,7 +12,7 @@ HEADERMAP=[
         ["Sales Delta Forecast vs Contract (New)"       ,"#,##0_);(#,##0)" ,"Q","K",    ""],
         ["Total Revenue (Hypo.)"                        ,"#,##0_);(#,##0)" ,"L","",     ""],
         ["Monthly Revenue (Hypo.)"                      ,"#,##0_);(#,##0)" ,"L","L",    "prev"],
-        ["Monthly Rev w/ est 995 and T&D"               ,"#,##0_);(#,##0)" ,"","",      ""],
+        ["Monthly Billings"                             ,"#,##0_);(#,##0)" ,"N","N",    "prev"],
         ["Est Cost (Contract)"                          ,"#,##0_);(#,##0)" ,"T","",     ""],
         ["E1 Forecasted Cost (New)"                     ,"#,##0_);(#,##0)" ,"AN","",    ""],
         ["Cost Delta Forecast vs Contract (New)"        ,"#,##0_);(#,##0)" ,"AN","T",   ""],

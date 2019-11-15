@@ -296,7 +296,7 @@ def main():
                         highlight_alternate_rows(sheet)        # option to skip this during debug mode
                 
                 #print("Hiding TBD columns")
-                for col in ['B', 'K', 'Q', 'R', 'S', 'AT', 'AV', 'BB']:
+                for col in ['B', 'Q', 'R', 'S', 'AT', 'AV', 'BB']:
                         sheet.column_dimensions[col].hidden= True
                 #print("Hiding first 2 blank rows")
                 # actually, only hiding row 2. Row 1 is left for spreadsheet title.
@@ -536,15 +536,16 @@ def mark_billings_over_contract_value(row):
         if row[xcol("Y")].value and row[xcol("F")].value:
                 if row[xcol("F")].value > 5:     #ignore if contract value is tiny
                         if row[xcol("Y")].value > row[xcol("F")].value:
-                                commenttext = "Billings exceed Contract Value. Possible change order needed."
+                                commenttext = "Billings exceed Contract Value. Change order needed."
                                 row[xcol("F")].comment = Comment(commenttext,"JMai")
                                 row[xcol("F")].fill = Redfillstyle
                                 return True
-                        elif row[xcol("O")].value *1.22 > row[xcol("F")].value:
-                                commenttext = "Actual Costs exceed Contract Value by 22%. Possible change order needed."
-                                row[xcol("F")].comment = Comment(commenttext,"JMai")
-                                row[xcol("F")].fill = Pinkfillstyle
-                                return True
+                        elif row[xcol("O")].value *1.22 > row[xcol("F")].value: #apply level 2 only if it is a CJ job
+                                if row[xcol("A")].value == "CJ":
+                                        commenttext = "Revenue accrual based on actual costs is lower than an 18% margin. Possible CO needed."
+                                        row[xcol("F")].comment = Comment(commenttext,"JMai")
+                                        row[xcol("F")].fill = Pinkfillstyle
+                                        return True
         else: return False
 
 def mark_actual_cost_over_billings_by_a_lot(row):
@@ -558,14 +559,14 @@ def mark_actual_cost_over_billings_by_a_lot(row):
         Cost_Perc_Threshold=1.25
         
         if row[xcol("Y")].value and row[xcol("O")].value:
-                if row[xcol("O")].value > 100 :    # ignore if cost is tiny, less than 100
+                if row[xcol("O")].value > 3000 :    # ignore if cost is tiny, less than 3000
                         if row[xcol("O")].value > row[xcol("Y")].value + Cost_Threshold:
                                 commenttext = "Actual Cost exceeds Total Billings by over $15k"
                                 row[xcol("Y")].comment = Comment(commenttext,"JMai")
                                 row[xcol("Y")].fill = Redfillstyle
                                 return True
                         elif row[xcol("O")].value * Cost_Perc_Threshold > row[xcol("Y")].value :
-                                commenttext = "Actual Cost exceeds 80% of Total Billings"
+                                commenttext = "Billings to Cost Ratio below 1.25"
                                 row[xcol("Y")].comment = Comment(commenttext,"JMai")
                                 row[xcol("Y")].fill = Pinkfillstyle
                                 return True
