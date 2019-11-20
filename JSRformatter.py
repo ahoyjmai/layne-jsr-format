@@ -531,16 +531,19 @@ def mark_billings_over_contract_value(row):
         # Two levels of highlight. Light Red level 1, Dark Red level 2
         # Level 1: mark if est sales < actual cost * 1.22
         # Level 2: mark if est sales < billings (This one is more important, highlight this one if you have to choose)
-
+        threshold=100
+        
         # Y is billings, F is contract Value, O is actual Total Cost
         if row[xcol("Y")].value and row[xcol("F")].value:
-                if row[xcol("F")].value > 5:     #ignore if contract value is tiny
-                        if row[xcol("Y")].value > row[xcol("F")].value:
+                if row[xcol("F")].value > 5:
+                        #ignore if contract value is tiny
+                        if row[xcol("Y")].value > row[xcol("F")].value + threshold:
                                 commenttext = "Billings exceed Contract Value. Change order needed."
                                 row[xcol("F")].comment = Comment(commenttext,"JMai")
                                 row[xcol("F")].fill = Redfillstyle
                                 return True
-                        elif row[xcol("O")].value *1.22 > row[xcol("F")].value: #apply level 2 only if it is a CJ job
+                        elif row[xcol("O")].value *1.22 > row[xcol("F")].value and row[xcol("O")].value > row[xcol("F")].value + threshold:
+                                #apply level 2 only if it is a CJ job
                                 if row[xcol("A")].value == "CJ":
                                         commenttext = "Revenue accrual based on actual costs is lower than an 18% margin. Possible CO needed."
                                         row[xcol("F")].comment = Comment(commenttext,"JMai")
