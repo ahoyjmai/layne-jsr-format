@@ -20,10 +20,14 @@ output_dir = "../output"
 # equations are hard-coded in HEADERMAP
 #
 # Written by Jonathan Mai on 8/7/2019
-Last_Updated = "Last Updated 11/14/2019"
-Version_Number = "Version v1.4"
+Last_Updated = "Last Updated 12/27/2019"
+Version_Number = "Version v1.5"
 
 # version Notes
+
+# v1.5
+# Fixed major bug. Changed highlighting rules to use ".value is not None" rather than just ".value"
+# This was skipping rules when the value was = zero. especially bad if ignoring cost overruns when billing=0
 
 # v1.3
 # various directory related bugs fixed. Pyinstaller is able to turn this into EXE file.
@@ -258,14 +262,15 @@ def main():
                 if row[xcol("AU")].value is None:                   # Col AU contains the region code
                         continue
                 if i%500==0:
-                                print("... on row",i,"of",ws2.max_row)
-
+                        print("... on row",i,"of",ws2.max_row)
+                
                 putinother=True        
                 for worksheet in regional_worksheet_list:
                         #print (" ", end="")
                         if worksheet.code in row[xcol("AU")].value:             # copy to regional sheet if code matches
                                 nextrow=worksheet.body.max_row+1
                                 for cell in row:
+                                        if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
                                         new_cell = worksheet.body.cell(row=nextrow, column=cell.col_idx, value= cell.value)
                                         if cell.has_style:
                                                 new_cell.border = copy(cell.border)
@@ -280,6 +285,7 @@ def main():
                         nextrow=wsother.max_row+1
                         #print (row[xcol("AU")].value,"- Other")
                         for cell in row:
+                                if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
                                 new_cell = wsother.cell(row=nextrow, column=cell.col_idx, value= cell.value)
                                 if cell.has_style:
                                         new_cell.border = copy(cell.border)
@@ -434,14 +440,15 @@ def highlight_alternate_rows(worksheet):
                         #print(".",end="")
                         sys.stdout.write(".")
                         sys.stdout.flush()
-                for cell in worksheet[i]:
+                for cell in worksheet[i]:       # for each cell in this row
+                        if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
                         if i%2==1:  # on odd rows and cells without default fill
                                 if cell.fill.start_color.rgb is "00000000":
                                     cell.fill = fillstyle
                                     cell.border = borderstyle
-                        if cell.value==0:
+                        if cell.value==0 and cell.column!="Y":  # don't apply gray formatting to zeros in billing column
                                 cell.font = Font(color="b2b2b2")
-                        pass                        
+                        
 
 def killer():
         print ("killer!")
@@ -492,8 +499,8 @@ Redfillstyle = PatternFill(start_color='FF7D7D',fill_type = "solid")
 Pinkfillstyle = PatternFill(start_color='FFAFAF',fill_type = "solid")
 
 def mark_if_actual_cost_is_greater_than_forecasted_cost(row):
-        # O is actual cost, N is Forecasted cost
-        if row[xcol("O")].value and row[xcol("M")].value:
+        # O is actual cost, M is Forecasted cost
+        if row[xcol("O")].value is not None and row[xcol("M")].value is not None:
                 ActualGreaterThanForecast = row[xcol("O")].value - row[xcol("M")].value
                 if ActualGreaterThanForecast > 0:
                         row[xcol("O")].fill = Redfillstyle
@@ -534,7 +541,7 @@ def mark_billings_over_contract_value(row):
         threshold=100
         
         # Y is billings, F is contract Value, O is actual Total Cost
-        if row[xcol("Y")].value and row[xcol("F")].value:
+        if row[xcol("Y")].value is not None and row[xcol("F")].value is not None:
                 if row[xcol("F")].value > 5:
                         #ignore if contract value is tiny
                         if row[xcol("Y")].value > row[xcol("F")].value + threshold:
@@ -557,22 +564,37 @@ def mark_actual_cost_over_billings_by_a_lot(row):
         # Level 1: mark if cost * 125% > billings
         # Level 2: mark if cost > billings + 15000 (This one is more important, highlight this one if you have to choose)
         
-        # Y is billings, O is actual Total Cost
+        # Y is billings,       O is actual Total Cost
         Cost_Threshold=15000 #ignore unless cost is over billings by a lot, otherwise everything gets flagged
         Cost_Perc_Threshold=1.25
-        
-        if row[xcol("Y")].value and row[xcol("O")].value:
+
+        zerotrigger=False
+        #if str(row[xcol("C")].value) == "912493":
+                #print("found 912493")
+                #print("it has billings=",end="")
+                #print(row[xcol("Y")].value)
+                #input("press enter to continue")
+        #if row[xcol("Y")].value == 0 :
+                #print("")
+                #print("zero billings found in job ["+str(row[xcol("C")].value)+"] ", end="")
+                #zerotrigger=True
+        if row[xcol("Y")].value is not None and row[xcol("O")].value is not None:
+                #if zerotrigger: print("debug 1,", end="")
                 if row[xcol("O")].value > 3000 :    # ignore if cost is tiny, less than 3000
+                 #       if zerotrigger: print("2", end="")
                         if row[xcol("O")].value > row[xcol("Y")].value + Cost_Threshold:
+                  #              if zerotrigger: print("3", end="")
                                 commenttext = "Actual Cost exceeds Total Billings by over $15k"
                                 row[xcol("Y")].comment = Comment(commenttext,"JMai")
                                 row[xcol("Y")].fill = Redfillstyle
                                 return True
                         elif row[xcol("O")].value * Cost_Perc_Threshold > row[xcol("Y")].value :
+                   #             if zerotrigger: print("4", end="")
                                 commenttext = "Billings to Cost Ratio below 1.25"
                                 row[xcol("Y")].comment = Comment(commenttext,"JMai")
                                 row[xcol("Y")].fill = Pinkfillstyle
                                 return True
+                    #    if zerotrigger: print("5", end="")
         return False
 
 def add_number_formatting(row,headermap):
