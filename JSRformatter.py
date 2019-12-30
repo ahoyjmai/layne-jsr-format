@@ -72,7 +72,7 @@ def main():
         ##### This section finds the filenames and directories for use####
         # locate most recent JSR file
         inputJSR=newest_file(input_dir,"JSR")
-        print ("Loading:",inputJSR)
+        print ("Loading:",inputJSR,end="     ")
         #print ("   "+inputJSR)
 
         try:
@@ -80,30 +80,34 @@ def main():
         except KeyboardInterrupt:
                 raise KeyboardInterrupt
         except:
+                print ()
                 print ("Error loading JSR. Closing this file in excel will likely fix the problem.")
-                input("Press 'ENTER' to close")
+                input ("Press 'ENTER' to close")
                 sys.exit()
         finally: 
                 ws1 = wb1.active
                 ws1.title= "Original_All"
                 newJSRtimestamp = get_timestamp_str(inputJSR,ws1)
                 ws1['A2'].value = newJSRtimestamp
-                
+        print (" Done.")
+               
 
 
         #load previous jsr
         inputJSR2=newest_file(input_dir2,"JSR")
-        print ("Loading:",inputJSR2)
+        print ("Loading:",inputJSR2,end="     ")
         #print ("   "+inputJSR2)
         try:
                 wbprev = load_workbook(inputJSR2)              # primary workbook being read
         except KeyboardInterrupt:
                 raise KeyboardInterrupt
         except:
+                print ()
                 print ("Error loading JSR. Closing this file in excel will likely fix the problem.")
-                input("Press 'ENTER' to close")
+                input ("Press 'ENTER' to close")
                 sys.exit()
-                
+        print (" Done.")
+        
         # find right worksheet in previous
         #print ("previous JSR loaded, now searching for correct sheet")
         if len(wbprev.sheetnames)>1:
@@ -461,21 +465,37 @@ def xcol(alphanumeric):
 def newest_file(path,keyword=""):
 # This function returns the most recently updated file in directory "path"
 # Optional, add a filter keyword filenames
+      
         files = os.listdir(path)
         if files ==[]:
                 print ("Error: There are no files in",path)
                 print ("Please put JSR files into the input folders and try again.")
                 input("Press 'ENTER' to quit")
-                sys.exit()                       
+                sys.exit()
 
-        tracksheets=[]
-        for basename in files:
-                if basename.find(keyword)!=-1 :
-                        #print (basename)
-                        #print (basename.replace('\\','/'))
-                        tracksheets.append(basename)
-        paths = [os.path.join(path, basename) for basename in tracksheets]
-        return max(paths, key=os.path.getctime).replace('\\','/')
+# if a keyword is supplied, run it twice, once with keyword and once without.                
+        while True:
+                tracksheets=[]
+                for basename in files:
+                        if basename.lower().find(keyword.lower())!=-1 :
+                                #print (basename)
+                                #print (basename.replace('\\','/'))
+                                tracksheets.append(basename)
+
+                paths = [os.path.join(path, basename) for basename in tracksheets]
+                #print ("paths = ",paths)
+                if paths :      # if paths is not empty
+                        return max(paths, key=os.path.getctime).replace('\\','/')
+                elif keyword is "":                              
+                        print("I couldn't find the JSR file to load at ",path)
+                        input("script will cancel, press enter to close and insert JSR file")
+                        sys.exit()
+                else:
+                        keyword=""
+                 #       print ("Couldn't find file with JSR, searching now for any file")
+                        
+        input("Something went wrong trying to find the JSR files. Press enter and this script will stop.")
+        sys.exit()
 
 def parse_for_date(searchterm,key):
         return searchterm[searchterm.find(key)+len(key):]
