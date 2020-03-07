@@ -79,46 +79,14 @@ def add_subtotals():
         # finish subtotal        
         pyautogui.press('enter')
 
-def add_formatting():
-        move_down_right(1,3)
-        for k in range(4):
-                # move to subtotal row
-                pyautogui.keyDown('ctrl')
-                pyautogui.press('down')
-                pyautogui.keyUp('ctrl')
-                #time.sleep(0.3)
-                pyautogui.press('down')
-                # highlight row
-                pyautogui.keyDown('shift')
-                pyautogui.press('space')
-                pyautogui.keyUp('shift')
-
-                # select grey cell fill
-                pyautogui.keyDown('alt')
-                pyautogui.press('h')
-                pyautogui.press('h')
-                pyautogui.keyUp('alt')
-                pyautogui.press('down')
-                pyautogui.press('down')
-                pyautogui.press('right')
-                pyautogui.press('right')
-                pyautogui.press('enter')
-
-                # select black font color
-                pyautogui.keyDown('alt')
-                pyautogui.press('h')
-                pyautogui.press('f')
-                pyautogui.press('c')
-                pyautogui.keyUp('alt')
-                pyautogui.press('enter')
-
-                pyautogui.press('down')
-        # highlight row one last time
+def entire_row_greyfill_blackfont():
+        # selects entire row of current cell and sets fill color and font color.
+        #To be used on Totals and Subtotal lines.
+        #shift-space is hotkey to select row
         pyautogui.keyDown('shift')
         pyautogui.press('space')
         pyautogui.keyUp('shift')
-
-        # select grey cell fill
+        # gives grey fill
         pyautogui.keyDown('alt')
         pyautogui.press('h')
         pyautogui.press('h')
@@ -128,14 +96,42 @@ def add_formatting():
         pyautogui.press('right')
         pyautogui.press('right')
         pyautogui.press('enter')
-
-        # select black font color
+        # black font color
         pyautogui.keyDown('alt')
         pyautogui.press('h')
         pyautogui.press('f')
         pyautogui.press('c')
         pyautogui.keyUp('alt')
-        pyautogui.press('enter')        
+        pyautogui.press('enter')
+                
+def add_formatting():
+        # These rows will receive special highlighting. Add more if more are needed.
+        searchterms=["MJ Total",
+                     "LJ Total",
+                     "FJ Total",
+                     "CJ Total",
+                     "C Total",
+                     "Grand Total"]
+
+        #reset cursor position in case it's weirdly highlighted
+        move_down_right(1,1)
+        
+        for term in searchterms:
+                # ctrl-f to bring up search box and type in search term
+                pyautogui.keyDown('ctrl')
+                pyautogui.press('f')
+                pyautogui.keyUp('ctrl')
+                for i in term:
+                        pyautogui.press(i)
+                pyautogui.press('enter')        # enter to locate search term
+                for a in range(4):                
+                        pyautogui.press('escape')
+                        # escape to close search box.
+                        # repeat multiple times to close "no item found window"
+                
+                entire_row_greyfill_blackfont()
+                pyautogui.press('right')         # do this to stop highlighting row
+                
 
 #set_main_window()
 def windowEnumerationHandler(hwnd, top_windows):
