@@ -4,7 +4,9 @@ import os
 import time
 import sys
 
-pyautogui.PAUSE=0.03    # standard delay in seconds, pyautogui automatically delays this long after each 
+regularspeed=0.03
+slowspeed=0.2
+pyautogui.PAUSE=regularspeed    # standard delay in seconds, pyautogui automatically delays this long after each 
 
 def move_to_last_worksheet():
         pyautogui.keyDown('ctrl')
@@ -53,10 +55,12 @@ def add_subtotals():
                      1,1,1,1,1,1,
                      1,1,]
         # enter subtotal menu
+        pyautogui.PAUSE=slowspeed
         pyautogui.keyDown('alt')
         pyautogui.press('a')
         pyautogui.press('b')
         pyautogui.keyUp('alt')
+        pyautogui.PAUSE=regularspeed
 
         # set to 'sum' instead of 'count'
         pyautogui.keyDown('shift')
@@ -103,8 +107,28 @@ def entire_row_greyfill_blackfont():
         pyautogui.press('c')
         pyautogui.keyUp('alt')
         pyautogui.press('enter')
-                
+
 def add_formatting():
+        pyautogui.PAUSE=slowspeed
+        # open conditional formatting menu
+        pyautogui.keyDown('alt')
+        pyautogui.press('h')
+        pyautogui.press('l')
+        pyautogui.press('r')
+        pyautogui.keyUp('alt')
+
+        # edit rule (need to do this otherwise "apply" button doesn't activate and nothing changes
+        pyautogui.keyDown('alt')
+        pyautogui.press('e')
+        pyautogui.keyUp('alt')
+
+        # apply rules and now conditional formatting should be active.
+        pyautogui.press('enter')
+        pyautogui.press('enter')
+        pyautogui.PAUSE=regularspeed
+
+def add_formatting2():
+# addformatting2 is not used. it was a previous semi-functioning version of highlihgting subtotal rows, but i've replaced it with addformatting() instead.
         # These rows will receive special highlighting. Add more if more are needed.
         searchterms=["MJ Total",
                      "LJ Total",
@@ -179,7 +203,7 @@ def KEYBOARD_MACRO_START():
                 print("Finished sheet.")
                 move_down_right(2,0)
                 go_back_x_sheets(1)
-                time.sleep(2)
+                time.sleep(1)
         time.sleep(3)
         ctrl_s_to_save()
         print("Finished, you can use the keyboard and mouse now!")

@@ -52,6 +52,7 @@ import signal
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
+from openpyxl.formatting.rule import FormulaRule
 from openpyxl.comments import Comment
 from copy import copy
 import numpy as np 
@@ -137,7 +138,7 @@ def main():
         
         if start.lower()=="debug":
                 DEBUG=True
-                print("ACTIVATING DEBUG MODE: alternate row highlighting is disabled to let script run faster.")
+                print("ACTIVATING DEBUG (FAST) MODE: 70% of rows are skipped. Alternate row highlighting is disabled to let script run faster.")
 
         print ("--------------------------------------------------------------------------")
         print()
@@ -193,8 +194,10 @@ def main():
         for i,row in enumerate(data,1):
                 if i%500==0:
                         print("... on row",i,"of",ws1.max_row)
-                #if i > 210:      # For debugging, only do 210 rows since this takes a while
-                 #       break    # comment this section out when live
+                        
+                if DEBUG:
+                        if i%10 > 3:
+                                continue        #continue will skip rows numbered 3-9, skipping 70% of the entries.
 
                 trythisrowfirst=0       #speeds up vlookup by searching this row first, which should be the search hit from the last time.
                 for j,col in enumerate(HEADERMAP,1):
@@ -324,6 +327,22 @@ def main():
                 #print("Putting Filter in Place")
                 FullRange = "A3:" + get_column_letter(sheet.max_column)  + str(sheet.max_row)
                 sheet.auto_filter.ref = FullRange
+
+                #conditional formatting to highlight subtotals
+                # this finds rows with "Total" in column A and has an equation in col F, which is pretty unique to subtotal rows
+                # subtotals will be activated during macro portion because openpyxl does not support it.
+                #grey_fill = PatternFill(bgColor="aaaaaa")
+                #black_font = 
+                #dxf = DifferentialStyle(fill=grey_fill, font=black_font)
+                #r = Rule(type="expression", font=black_font, fill=grey_fill, dxf=dxf, stopIfTrue=True)
+                #r.formula = ['=AND(ISNUMBER(SEARCH(" Total",$A4)),ISFORMULA($F4))']
+                sheet.conditional_formatting.add("A1:BE5000",
+                        FormulaRule(formula=['AND(ISNUMBER(SEARCH(" Total",$A1)),ISFORMULA($F1))'],
+                                stopIfTrue=True,
+                                font=Font(color="000000"),
+                                fill=PatternFill(bgColor="aaaaaa") )
+                        )                                         
+                # this code doesn't work. conditional formatting still needs user to go in and click "apply formatting" before effects kick in
 
         # move original sheet to end 
         move_sheet(wb1,0,len(wb1._sheets)-1)
@@ -533,7 +552,8 @@ def clean_sales_vs_billings_values(row):
         # AC and AD is billings vs sales, delete if negative
         for a in ["AC","AD"]:
                 b=row[xcol(a)].value
-                if b<0: row[xcol(a)].value =""
+                if b is not None: # make sure we don't compare "" with an integer.
+                        if b<0: row[xcol(a)].value =""
         return        
                 
 def mark_large_POC_receivables(row):
