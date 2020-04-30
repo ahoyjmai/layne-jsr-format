@@ -3,6 +3,7 @@
 # Download latest JSR file from power BI and insert into "input" folder here:
 input_dir = "../input new jsr"
 input_dir2 = "../input prev jsr"
+input_dir3 = "../input MH"
 
 # Double click the .py script and it will run.
 # It will generate a updated service file here:
@@ -20,10 +21,13 @@ output_dir = "../output"
 # equations are hard-coded in HEADERMAP
 #
 # Written by Jonathan Mai on 8/7/2019
-Last_Updated = "Last Updated 12/27/2019"
-Version_Number = "Version v1.5"
+Last_Updated = "Last Updated 4/30/2020"
+Version_Number = "Version v1.6"
 
 # version Notes
+# v1.6
+# file now requires a weekly MH input file to work.
+# calculates 995 in column QRS.
 
 # v1.5
 # Fixed major bug. Changed highlighting rules to use ".value is not None" rather than just ".value"
@@ -58,6 +62,7 @@ from copy import copy
 import numpy as np 
 from macro import *
 from headermap import *
+DEBUG=False
 
 def main():
         DEBUG=False
@@ -67,10 +72,9 @@ def main():
                 print (intro.read())
 
         print()
-        #os.chdir(output_dir)     #change to directory specified in top notes section
-        # cwd=os.getcwd()       #prints name of current directory
-
+        
         ##### This section finds the filenames and directories for use####
+        
         # locate most recent JSR file
         inputJSR=newest_file(input_dir,"JSR")
         print ("Loading:",inputJSR,end="     ")
@@ -97,7 +101,7 @@ def main():
         #load previous jsr
         inputJSR2=newest_file(input_dir2,"JSR")
         print ("Loading:",inputJSR2,end="     ")
-        #print ("   "+inputJSR2)
+        
         try:
                 wbprev = load_workbook(inputJSR2)              # primary workbook being read
         except KeyboardInterrupt:
@@ -110,7 +114,6 @@ def main():
         print (" Done.")
         
         # find right worksheet in previous
-        #print ("previous JSR loaded, now searching for correct sheet")
         if len(wbprev.sheetnames)>1:
                 for possible_title in ["Original_All","Sheet1"]:   #acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
                         if possible_title in wbprev.sheetnames:
@@ -124,11 +127,73 @@ def main():
                 input("Press 'ENTER' to close")
                 sys.exit()
 
+        #load manhours report
+        inputMHreport=newest_file(input_dir3,"manhours report by allocation area")
+        print ("Loading:",inputMHreport,end="     ")
+        try:
+                wbmh = load_workbook(inputMHreport)
+        except KeyboardInterrupt:
+                raise KeyboardInterrupt
+        except:
+                print ()
+                print ("Error loading MH Report. Closing this file in excel will likely fix the problem.")
+                input ("Press 'ENTER' to close")
+                sys.exit()
+        print (" Done.")
+
+        # find right worksheet in mh report
+        if len(wbmh.sheetnames)>1:
+                for possible_title in ["manhours report by allocation a","manhours report by allocation","Sheet1"]:   #acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
+                        if possible_title in wbmh.sheetnames:
+                                if wbmh[possible_title]['A1'].value == "ALLOCATION AREA" and wbmh[possible_title]['H1'].value == "SUBSIDIARY": # If these headers are here, this is the right sheet
+                                        wsmh = wbmh[possible_title]
+                                        break # once you find it stop searching
+        elif wbmh[wbmh.sheetnames[0]]['A1'].value == "ALLOCATION AREA": #the correct format should have 'contract type' in the 3rd line first column
+                wsmh = wbmh[wbmh.sheetnames[0]]
+        else:
+                print ("Could not find correct sheet in Manhours Report")
+                input("Press 'ENTER' to close")
+                sys.exit()
+
+        #load 995 key
+        input995key=newest_file(input_dir3,"995 key")
+        print ("Loading:",input995key,end="     ")
+        try:
+                wbkey = load_workbook(input995key)
+        except KeyboardInterrupt:
+                raise KeyboardInterrupt
+        except:
+                print ()
+                print ("Error loading MH Report. Closing this file in excel will likely fix the problem.")
+                input ("Press 'ENTER' to close")
+                sys.exit()
+        print (" Done.")
+
+        # find right worksheet in key
+        if len(wbkey.sheetnames)>1:
+                for possible_title in ["key","KEY","Key","Sheet1"]:   #acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
+                        if possible_title in wbkey.sheetnames:
+                                if wbkey[possible_title]['C1'].value == "Cost Cntr Home" and wbkey[possible_title]['G1'].value == "Total Rate": # If these headers are here, this is the right sheet
+                                        wskey = wbkey[possible_title]
+                                        break # once you find it stop searching
+        elif wbkey[wbkey.sheetnames[0]]['G1'].value == "Total Rate": #the correct format should have 'contract type' in the 3rd line first column
+                wskey = wbkey[wbkey.sheetnames[0]]
+        else:
+                print ("Could not find correct sheet in 995 Key")
+                input("Press 'ENTER' to close")
+                sys.exit()
+
+        # Get timestamps from files to verify with user
         oldJSRtimestamp = get_timestamp_str(inputJSR2,wsprev)
         wsprev['A2'].value = oldJSRtimestamp #not this one because it would be putting the value in the file in "old JSR" isntead of the newly generated one.
+        mhreporttimestamp = inputMHreport[-12:-5]  # try to get "WE 0419" out of "..... WE 0419.xlsx"
+        keytimestamp = time.strftime('%Y-%m-%d', time.gmtime(os.path.getmtime(input995key)))
+        
         print()
         print("      New JSR dated", newJSRtimestamp)
         print("     Prev JSR dated", oldJSRtimestamp)
+        print("    MH Report dated", mhreporttimestamp)
+        print("      995 Key dated", keytimestamp)
         print()
         print("Please note: To kill this script at any time, press Ctrl-C in this window")
         print()        
@@ -145,16 +210,16 @@ def main():
         print ("Initializing all the new worksheets")
 
         #create all the new worksheets
-        ws2 = newSheetWithHeaders(wb1,"All Areas",HEADERMAP)
+        ws2 = newSheetWithHeaders(wb1,"All Areas",HEADERMAP,mhreporttimestamp)
         regional_worksheet_list = [
-                newWorksheet("West591","591",wb1),
-                newWorksheet("Southwest592","592",wb1),
-                newWorksheet("Central586","586",wb1),
-                newWorksheet("SouthEast587","587",wb1),
-                newWorksheet("NorthEast588","588",wb1),
-                newWorksheet("Treatment590","590",wb1),
+                newWorksheet("West591","591",wb1,mhreporttimestamp),
+                newWorksheet("Southwest592","592",wb1,mhreporttimestamp),
+                newWorksheet("Central586","586",wb1,mhreporttimestamp),
+                newWorksheet("SouthEast587","587",wb1,mhreporttimestamp),
+                newWorksheet("NorthEast588","588",wb1,mhreporttimestamp),
+                newWorksheet("Treatment590","590",wb1,mhreporttimestamp),
                 ]
-        wsother = newSheetWithHeaders(wb1,"Other",HEADERMAP)
+        wsother = newSheetWithHeaders(wb1,"Other",HEADERMAP,mhreporttimestamp)
 
         # setting up a list of all worksheets for convenience
         all_modified_worksheet_list = []
@@ -230,8 +295,110 @@ def main():
                                                         calc = calc - subtractvalue
                                                         
                                 ws2.cell(row=i+3,column=j).value = calc
-                                #ws2.cell(row=i,column=j).number_format = copy(ws1[col[1] + str(i)].number_format)       # copy over the formatting
+        
+        ###### here go calculations based on 995 using Key and MH Report.
+        
+        #insert key and 995 sheet
+        
+        print("Copying 995 Key")
+        insertedkeyws = wb1.create_sheet(title="995 Key")       # create a blank worksheet in the JSR file
+        copyworksheet(wskey,insertedkeyws)                      # copy data from the other worksheet
+        
+        print ("Copying MH Report")
+        insertedmhws = wb1.create_sheet(title="MH "+mhreporttimestamp)
+        copyworksheet(wsmh,insertedmhws)
+                
+        #reminder, ws2 is the "all areas" worksheet.
 
+        # JSR columns
+        # Q = Monthly Cost w/ current 995 and T&D
+        # R = YTD Hourly Manhours WE 0426
+        # S = Est Accruals for 995 and T&D
+        
+        # MH report columns
+        # D = "Total Business Unit 877889"
+        # J = YTD MH
+
+        #for each row in the main worksheet
+        #get the job number
+        #and search in the MH report col D for the YTD MH in Col J
+        print ("Starting 995 calculations")
+
+        # prevent hard-coded column references. some are still hard coded like R and J
+        ws2_costcenter_col =    column_index_from_string(get_col_from_header_name(ws2,"Cost Cntr Home"))
+        ws2_jobnum_col =        column_index_from_string(get_col_from_header_name(ws2,"Job #"))
+        ws2_YTDMH_col =         column_index_from_string(get_col_from_header_name(ws2,"YTD Hourly Manhours",3,exact=False))
+        ws2_accrual_col =       column_index_from_string(get_col_from_header_name(ws2,"Est Accruals for 995 and T&D"))
+        ws2_mocost995_col =     column_index_from_string(get_col_from_header_name(ws2,"Monthly Cost w/ current 995 and T&D"))
+        ws2_actmocost_col =     column_index_from_string(get_col_from_header_name(ws2,"Actual Monthly Cost"))
+
+                
+        wsmh_busunit_col =      column_index_from_string(get_col_from_header_name(insertedmhws,"COMPANY",1))
+        wsmh_YTDMH_col =        column_index_from_string(get_col_from_header_name(insertedmhws,"CUMULATIVE",1,exact=False))
+        wskey_costcenter_col =  column_index_from_string(get_col_from_header_name(insertedkeyws,"Cost Cntr Home",1))
+        wskey_995rate_col =     column_index_from_string(get_col_from_header_name(insertedkeyws,"Total Rate",1))
+
+
+        
+        
+        for j in range(4,ws2.max_row):
+                if j%500==0: print("... on row",j,"of",ws2.max_row)
+        #for row in ws2:
+                jobnumber=ws2.cell(row=j, column=ws2_jobnum_col).value
+                if jobnumber!=None:
+                        #print ("J= ",end="")
+                        #print (j)
+                        #print ("jobnumber= ",end="")
+                        #print (jobnumber)
+                        #print ("Searching for MH for JN: ",end="")
+                        manhours=False
+                        for i in range (1,insertedmhws.max_row):
+                                mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
+                                if mhreport_jobnumber == "Total Business Unit "+jobnumber:
+                                        #print (mhreport_jobnumber,end=" MH = ")
+                                        manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
+                                        manhours = manhourcell.value
+                                        ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
+                                        #manhourcell=ws2.cell(row=j, column=ws2_YTDMH_col)
+                                        #manhourcell.value = manhours
+                                        #print ("Found it. ",end="")
+                                        #print (manhours)
+                                        break
+
+                        ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value
+                        if "WATER TREATMENT" in ws2costcenter:
+                                ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
+                                ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="bfbfbf")
+                                ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
+                                ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="bfbfbf")
+                        elif manhours:
+                                #we found a MH result, so calculate the 995 costs in col s
+                                #print("entering 995 search")
+                                for x in range (1,insertedkeyws.max_row):
+                                        key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
+                                        if key_costcenter == ws2costcenter:                                                        
+                                                rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
+                                                accrual_formula = "="+"'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
+
+                                                #this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
+                                                temp_rate995 = wskey.cell(row=x, column=5)
+                                                temp_ratetnd = wskey.cell(row=x, column=6)
+                                                #print(temp_rate995.coordinate)
+                                                #print(temp_rate995.value)
+                                                #print(temp_ratetnd.coordinate)
+                                                #print(temp_ratetnd.value)
+                                                try:
+                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = (temp_rate995.value + temp_ratetnd.value)*manhours + ws2.cell(row=j, column=ws2_actmocost_col).value
+                                                except:
+                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
+                                                break
+                                            
+                                
+                                
+        
+        #######
+        
         ##########################################################################
         ######### CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS GO HERE#######
         ##########################################################################                        
@@ -260,13 +427,14 @@ def main():
         ## END OF CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS###############
         ##########################################################################
 
-        print ("Now splitting modified spreadsheet into regional sheets")
+        print ("Now splitting formatted spreadsheet into regional sheets")
 
         #split data from newly mapped sheet into multiple regional sheets
+        col_region=xcol(get_col_from_header_name(ws2,"Area"))
         for i,row in enumerate(ws2.iter_rows(),1):
                 if i <= 3:      # skip the first 3 rows
                         continue
-                if row[xcol("AU")].value is None:                   # Col AU contains the region code
+                if row[col_region].value is None:                   # Col AV contains the region code
                         continue
                 if i%500==0:
                         print("... on row",i,"of",ws2.max_row)
@@ -274,7 +442,7 @@ def main():
                 putinother=True        
                 for worksheet in regional_worksheet_list:
                         #print (" ", end="")
-                        if worksheet.code in row[xcol("AU")].value:             # copy to regional sheet if code matches
+                        if worksheet.code in row[col_region].value:             # copy to regional sheet if code matches
                                 nextrow=worksheet.body.max_row+1
                                 for cell in row:
                                         if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
@@ -290,7 +458,7 @@ def main():
                                 break
                 if putinother is True:                # copy to Other page if no match
                         nextrow=wsother.max_row+1
-                        #print (row[xcol("AU")].value,"- Other")
+                        #print (row[col_region].value,"- Other")
                         for cell in row:
                                 if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
                                 new_cell = wsother.cell(row=nextrow, column=cell.col_idx, value= cell.value)
@@ -303,16 +471,18 @@ def main():
         print ("Now preparing highlighted rows & styling")
 
         #this takes a while to execute so hide comment it out when running if you're not specifically testing it 
+        countdown=len(all_modified_worksheet_list)
         for sheet in all_modified_worksheet_list:
+                print (countdown,end="")
+                countdown= countdown-1
                 #print("Highlighting alternate rows")
                 if not DEBUG:
                         highlight_alternate_rows(sheet)        # option to skip this during debug mode
                 
                 #print("Hiding TBD columns")
-                for col in ['B', 'Q', 'R', 'S', 'AT', 'AV', 'BB']:
+                for col in ['B', 'AU', 'AW', 'BC']:
                         sheet.column_dimensions[col].hidden= True
-                #print("Hiding first 2 blank rows")
-                # actually, only hiding row 2. Row 1 is left for spreadsheet title.
+                # hide row 2. Row 1 is left for old header titles .
                 for row in [1]:
                         sheet.row_dimensions[row].hidden= True
                 # freezing pane
@@ -342,7 +512,7 @@ def main():
                                 font=Font(color="000000"),
                                 fill=PatternFill(bgColor="aaaaaa") )
                         )                                         
-                # this code doesn't work. conditional formatting still needs user to go in and click "apply formatting" before effects kick in
+                # this conditional formatting doesn't work until needs user (or macro) goes in and click "apply formatting".
 
         # move original sheet to end 
         move_sheet(wb1,0,len(wb1._sheets)-1)
@@ -359,7 +529,7 @@ def main():
                 highlight_alternate_rows(prevworksheet)
         
         prevworksheet['B2'].value = oldJSRtimestamp
-
+        
         ws2.active = 0
         ws1.views.sheetView[0].tabSelected = False
 
@@ -405,14 +575,33 @@ def main():
         AUTOMATE_EXCEL_FORMATTING(savefile,save_file_name)
         input("Script complete. Press 'ENTER' to close")
 
-def newSheetWithHeaders(workbook,sheettitle,headermap):
+def copyworksheet(source,destination):
+        #maxrow is int type. optional value to optimize the copy worksheet to make sure it doesn't go past a particular column
+        for row in source:         
+                for cell in row:
+                        destination[cell.coordinate].value = cell.value                        
+                        if cell.has_style:
+                                destination[cell.coordinate].border = copy(cell.border)
+                                destination[cell.coordinate].font = copy(cell.font)
+                                destination[cell.coordinate].fill = copy(cell.fill)
+                                destination[cell.coordinate].number_format = copy(cell.number_format)
+                                destination[cell.coordinate].comment = copy(cell.comment)
+                                destination[cell.coordinate].alignment = copy(cell.alignment)
+        for idx, rd in source.row_dimensions.items():
+                destination.row_dimensions[idx] = copy(rd)
+        for idx, rd in source.column_dimensions.items():
+                destination.column_dimensions[idx] = copy(rd)
+        
+def newSheetWithHeaders(workbook,sheettitle,headermap,mhtimestamp):
         worksheet = workbook.create_sheet(title=sheettitle)     # create new sheet with region title
         
         newheaders=[]
-        oldheaders=[]
+        oldheaders=[]   # names of headers from old JSR, for reference in top row
         oldws = workbook["Original_All"]
         for col in headermap:           # extracts and creates list of header names from headermap
-                newheaders.append(col[0])
+                if col[0]=="YTD Hourly Manhours":
+                        newheaders.append(col[0]+" "+mhtimestamp)       # special header naming for manhours to show which week end it is
+                else: newheaders.append(col[0])
                 if col[2]!="" and col[3]=="":
                         oldheaders.append(oldws[col[2]+'3'].value)
                 else:   oldheaders.append("")
@@ -425,15 +614,17 @@ def newSheetWithHeaders(workbook,sheettitle,headermap):
                 cell.fill = PatternFill(start_color='5B9BD5',fill_type = "solid")   # start_color is background color, end_color is font color
                 cell.alignment = Alignment(wrap_text=True)
                 cell.font = Font(color="FFFFFF",bold=True)
+                if cell.column in ['Q','R','S']:
+                        cell.fill = PatternFill(start_color='808080',fill_type = "solid")   # start_color is background color, end_color is font color
                 
         return worksheet
 
                 
 class newWorksheet:
-        def __init__(self, title, code, workbook):
+        def __init__(self, title, code, workbook, mhtimestamp):
                 self.title=title
                 self.code=code
-                self.body= newSheetWithHeaders(workbook,title,HEADERMAP)
+                self.body= newSheetWithHeaders(workbook,title,HEADERMAP, mhtimestamp)
 
 def move_sheet(wb, from_loc=None, to_loc=None):
         sheets=wb._sheets
@@ -465,10 +656,13 @@ def highlight_alternate_rows(worksheet):
                         sys.stdout.flush()
                 for cell in worksheet[i]:       # for each cell in this row
                         if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
-                        if i%2==1:  # on odd rows and cells without default fill
+                        if cell.column in ['Q','R','S']:        # special highlighting for 995 columns
+                                cell.fill = PatternFill(start_color='c7c7c7',fill_type = "solid")
+                                cell.border =  Border(top=Side(style='thin',color="bfbfbf"), bottom=Side(style='thin',color="bfbfbf"))
+                        elif i%2==1:  # on odd rows and cells without default fill
                                 if cell.fill.start_color.rgb is "00000000":
-                                    cell.fill = fillstyle
-                                    cell.border = borderstyle
+                                        cell.fill = fillstyle
+                                        cell.border = borderstyle
                         if cell.value==0 and cell.column!="Y":  # don't apply gray formatting to zeros in billing column
                                 cell.font = Font(color="b2b2b2")
                         
@@ -644,6 +838,18 @@ def add_number_formatting(row,headermap):
 def mark_billings_not_proportional_to_Cost(row):
         pass
 
+def get_col_from_header_name(ws,headername,header_row=3,exact=True):
+        # checks a ws in a particular row for a particular string. returns alpha column
+        # exact true means a hard match.
+        # exact false means it can contain the search string
+        for cell in ws[header_row]:
+                if exact:
+                        if headername.lower()==cell.value.lower():
+                                return cell.column
+                else:
+                        if headername.lower() in cell.value.lower():
+                                return cell.column
+                        
 
 ###############################################
 #This executes main script

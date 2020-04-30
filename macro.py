@@ -53,7 +53,7 @@ def add_subtotals():
                      1,1,1,1,1,1,
                      1,1,1,1,0,1,
                      1,1,1,1,1,1,
-                     1,1,]
+                     1,1,1]
         # enter subtotal menu
         pyautogui.PAUSE=slowspeed
         pyautogui.keyDown('alt')
@@ -195,7 +195,7 @@ def focus_window(key="jsr"):
 def KEYBOARD_MACRO_START():
         time.sleep(1)
         move_to_last_worksheet()
-        go_back_x_sheets(3)
+        go_back_x_sheets(5)
         for k in range(7):      #do this 7 times because there are 7 sheets that need formatting
                 print("Starting sheet #",k,"...",end="")
                 add_subtotals()

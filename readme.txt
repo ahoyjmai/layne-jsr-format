@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------
-   J.Mai's JSR Reformatter v1.5
-   Script last updated 6 Mar 2020.
+   J.Mai's JSR Reformatter v1.6
+   Script last updated 30 Apr 2020.
 
    This script reformats the JSR and adds extra calculations and comments.
    Source code available: https://github.com/ahoyjmai/layne-jsr-format.git

@@ -1,6 +1,7 @@
 
 #[Column name, number formatting, (+)value, (-)value, 'prev' if (-) is to be subtracted from previous month]
 # column letters correspond to JSR downloaded from BI
+#       ["Column title seen in JSR"                     ,"Formatting"      ,"Value to grab from Original All", "Value to subtract from Original All", "Type in Prev if you want the subtract value to be from Original Prev instead of All"],
 HEADERMAP=[
         ["Contract Type"                                ,"General"         ,"B","",     ""],
         ["S"                                            ,"General"         ,"","",      ""] ,
@@ -18,9 +19,9 @@ HEADERMAP=[
         ["Cost Delta Forecast vs Contract (New)"        ,"#,##0_);(#,##0)" ,"AN","T",   ""],
         ["Actual Total Cost"                            ,"#,##0_);(#,##0)" ,"AB","",    ""],
         ["Actual Monthly Cost"                          ,"#,##0_);(#,##0)" ,"U","",     ""],
-        ["Monthly Cost w/ current 995 and T&D"          ,"#,##0_);(#,##0)" ,"","",      ""],
-        ["Manhours (estimated accruals)"                ,"#,##0_);(#,##0)" ,"","",      ""],
-        ["Est Accruals for 995 and T&D"                 ,"#,##0_);(#,##0)" ,"","",      ""],
+        ["Monthly Cost w/ current 995 and T&D"          ,"#,##0_);(#,##0)" ,"","",      ""],    # Orig All "U" + However JSR col S is calculated
+        ["YTD Hourly Manhours"                          ,"#,##0_);(#,##0)" ,"","",      ""],    # would like date in col title  # Map to new file tab1 col J
+        ["Est Accruals for 995 and T&D"                 ,"#,##0_);(#,##0)" ,"","",      ""],    # JSR Col R * New File tab2 Col G
         ["Est Margin (Forecasted)"                      ,"#,##0_);(#,##0)" ,"AX","",    ""],
         ["Est Margin % (Forecasted)"                    ,"0.0%_);(0.0%)"   ,"AY","",    ""],
         ["Actual Margin"                                ,"#,##0_);(#,##0)" ,"AV","",    ""],
@@ -41,6 +42,7 @@ HEADERMAP=[
         ["Monthly Est Cost Change"                      ,"#,##0_);(#,##0)" ,"T","T","prev"],
         ["Monthly Est Profit Change"                    ,"#,##0_);(#,##0)" ,"AU","",    ""],
         ["Actual Margin Monthly Change"                 ,"#,##0_);(#,##0)" ,"AV","AV","prev"],
+        ["Forecast Margin Monthly Change"               ,"#,##0_);(#,##0)" ,"AX","AX","prev"],
         ["LEMSO ITD Labor Actual"                       ,"#,##0_);(#,##0)" ,"AC","",    ""],
         ["LEMSO ITD Equipment Actual"                   ,"#,##0_);(#,##0)" ,"AD","",    ""],
         ["LEMSO ITD Materials Actual"                   ,"#,##0_);(#,##0)" ,"AF","",    ""],
