@@ -21,13 +21,10 @@ output_dir = "../output"
 # equations are hard-coded in HEADERMAP
 #
 # Written by Jonathan Mai on 8/7/2019
-Last_Updated = "Last Updated 4/30/2020"
-Version_Number = "Version v1.6"
+Last_Updated = "Last Updated 12/27/2019"
+Version_Number = "Version v1.5"
 
 # version Notes
-# v1.6
-# file now requires a weekly MH input file to work.
-# calculates 995 in column QRS.
 
 # v1.5
 # Fixed major bug. Changed highlighting rules to use ".value is not None" rather than just ".value"
@@ -335,69 +332,109 @@ def main():
                 
         wsmh_busunit_col =      column_index_from_string(get_col_from_header_name(insertedmhws,"COMPANY",1))
         wsmh_YTDMH_col =        column_index_from_string(get_col_from_header_name(insertedmhws,"CUMULATIVE",1,exact=False))
+        wsmh_allocation_col =   column_index_from_string(get_col_from_header_name(insertedmhws,"ALLOCATION AREA",1))
         wskey_costcenter_col =  column_index_from_string(get_col_from_header_name(insertedkeyws,"Cost Cntr Home",1))
         wskey_995rate_col =     column_index_from_string(get_col_from_header_name(insertedkeyws,"Total Rate",1))
 
 
+        list_of_995_numbers = [
+                ["6008995","250"],
+                ["6009995","277"],
+                ["6010995","251"],
+                ["6012995","252"],
+                ["6013995","253"],
+                ["6014995","254"],
+                ["6015995","255"],
+                ["6017995","256"],
+                ["6018995","257"],
+                ["6019995","258"],
+                ["6020995","259"],
+                ["6021995","260"],
+                ["6022995","261"],
+                ["6023995","262"],
+                ["6024995","263"],
+                ["6025995","264"],
+                ["6026995","265"],
+                ["6027995","266"],
+                ["6028995","267"],
+                ["6029995","268"],
+                ["6031995","269"],
+                ["6032995","270"],
+                #["6033995","271"], Water treatment is ignored
+                ["6040995","272"],
+                ["6041995","273"],
+                ["6401995","274"],
+                ["6402995","275"],
+                ["6403995","276"],]
+
         
-        
+
         for j in range(4,ws2.max_row):
-                if j%500==0: print("... on row",j,"of",ws2.max_row)
-        #for row in ws2:
-                jobnumber=ws2.cell(row=j, column=ws2_jobnum_col).value
-                if jobnumber!=None:
-                        #print ("J= ",end="")
-                        #print (j)
-                        #print ("jobnumber= ",end="")
-                        #print (jobnumber)
-                        #print ("Searching for MH for JN: ",end="")
-                        manhours=False
-                        for i in range (1,insertedmhws.max_row):
-                                mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
-                                if mhreport_jobnumber == "Total Business Unit "+jobnumber:
-                                        #print (mhreport_jobnumber,end=" MH = ")
-                                        manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
-                                        manhours = manhourcell.value
-                                        ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
-                                        #manhourcell=ws2.cell(row=j, column=ws2_YTDMH_col)
-                                        #manhourcell.value = manhours
-                                        #print ("Found it. ",end="")
-                                        #print (manhours)
+                if j%500==0: print("... on row",j,"of",ws2.max_row)     # progress bar
+                
+                jobnumber=ws2.cell(row=j, column=ws2_jobnum_col).value  # load job number for this row
+                if jobnumber:
+                        manhours=False          # Identifies if this has any MH in it
+                        areasupervision=False   # Identifies if this is 995 number
+
+                        for item in list_of_995_numbers:
+                                if item[0] == jobnumber:
+                                        areasupervision=item[1]
                                         break
 
-                        ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value
+                        for i in range (1,insertedmhws.max_row):
+
+                                # this if-else finds and enters the manhours
+                                if areasupervision:
+                                        # calculate 995 as region supervision number.
+                                        mhreport_allocation = insertedmhws.cell(row=i, column=wsmh_allocation_col).value
+                                        if mhreport_allocation == "Total "+areasupervision:
+                                                manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
+                                                manhours = manhourcell.value
+                                                ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
+                                                break
+                                else:
+                                        # calculate 995 as normal job number.
+                                        mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
+                                        if mhreport_jobnumber == "Total Business Unit "+jobnumber:
+                                                manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
+                                                manhours = manhourcell.value
+                                                ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
+                                                break
+
+                        ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value        # this is the cost center for the current job number ie " REDLANDS - WA"
+                        
                         if "WATER TREATMENT" in ws2costcenter:
                                 ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
-                                ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="bfbfbf")
                                 ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
-                                ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="bfbfbf")
                         elif manhours:
-                                #we found a MH result, so calculate the 995 costs in col s
-                                #print("entering 995 search")
+                                # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
                                 for x in range (1,insertedkeyws.max_row):
                                         key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
                                         if key_costcenter == ws2costcenter:                                                        
                                                 rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
-                                                accrual_formula = "="+"'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                
+                                                #accrual_formula = "="+"'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                accrual_formula = "'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                if areasupervision:
+                                                        accrual_formula = "=-"+accrual_formula   #areasupervision 995 numbers should be negative
+                                                else:
+                                                        accrual_formula = "="+accrual_formula
+                                                
                                                 ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
 
                                                 #this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
                                                 temp_rate995 = wskey.cell(row=x, column=5)
                                                 temp_ratetnd = wskey.cell(row=x, column=6)
-                                                #print(temp_rate995.coordinate)
-                                                #print(temp_rate995.value)
-                                                #print(temp_ratetnd.coordinate)
-                                                #print(temp_ratetnd.value)
-                                                try:
-                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = (temp_rate995.value + temp_ratetnd.value)*manhours + ws2.cell(row=j, column=ws2_actmocost_col).value
-                                                except:
-                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
-                                                break
+                                                if not areasupervision: #do not calculate column Q for 995 job numbers
+                                                        try:
+                                                                ws2.cell(row=j, column=ws2_mocost995_col).value = (temp_rate995.value + temp_ratetnd.value)*manhours + ws2.cell(row=j, column=ws2_actmocost_col).value
+                                                        except:
+                                                                ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
+                                                        break
                                             
-                                
-                                
         
-        #######
+        ####### end oif 995 calculations
         
         ##########################################################################
         ######### CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS GO HERE#######
@@ -657,7 +694,7 @@ def highlight_alternate_rows(worksheet):
                 for cell in worksheet[i]:       # for each cell in this row
                         if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
                         if cell.column in ['Q','R','S']:        # special highlighting for 995 columns
-                                cell.fill = PatternFill(start_color='c7c7c7',fill_type = "solid")
+                                cell.fill = PatternFill(start_color='b4b4b4',fill_type = "solid")
                                 cell.border =  Border(top=Side(style='thin',color="bfbfbf"), bottom=Side(style='thin',color="bfbfbf"))
                         elif i%2==1:  # on odd rows and cells without default fill
                                 if cell.fill.start_color.rgb is "00000000":
