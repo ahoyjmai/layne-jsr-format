@@ -21,10 +21,15 @@ output_dir = "../output"
 # equations are hard-coded in HEADERMAP
 #
 # Written by Jonathan Mai on 8/7/2019
-Last_Updated = "Last Updated 12/27/2019"
-Version_Number = "Version v1.5"
+Last_Updated = "Last Updated 5/1/2020"
+Version_Number = "Version v1.6"
 
 # version Notes
+
+# v1.6
+# First version allowing 995 calcs. requires two new input files to put into a folder from adam. a YTD MH report
+# showing the week end date in filename, and a key file containing each regions 995 rates. calculated 995 cost
+# for job numbers only. now it calculates 995 cost for 995 job numbers ie 6009995, with negative value in accruals
 
 # v1.5
 # Fixed major bug. Changed highlighting rules to use ".value is not None" rather than just ".value"
@@ -60,6 +65,7 @@ import numpy as np
 from macro import *
 from headermap import *
 DEBUG=False
+RUN995=False
 
 def main():
         DEBUG=False
@@ -72,44 +78,19 @@ def main():
         
         ##### This section finds the filenames and directories for use####
         
-        # locate most recent JSR file
+        ## locate and load most recent JSR file
         inputJSR=newest_file(input_dir,"JSR")
-        print ("Loading:",inputJSR,end="     ")
-        #print ("   "+inputJSR)
+        wb1=trytoloadworkbook(inputJSR)
 
-        try:
-                wb1 = load_workbook(inputJSR)              # primary workbook being read
-        except KeyboardInterrupt:
-                raise KeyboardInterrupt
-        except:
-                print ()
-                print ("Error loading JSR. Closing this file in excel will likely fix the problem.")
-                input ("Press 'ENTER' to close")
-                sys.exit()
-        finally: 
-                ws1 = wb1.active
-                ws1.title= "Original_All"
-                newJSRtimestamp = get_timestamp_str(inputJSR,ws1)
-                ws1['A2'].value = newJSRtimestamp
-        print (" Done.")
-               
+        ws1 = wb1.active
+        ws1.title= "Original_All"
+        newJSRtimestamp = get_timestamp_str(inputJSR,ws1)
+        ws1['A2'].value = newJSRtimestamp
 
-
-        #load previous jsr
+        ## locate and load previous jsr
         inputJSR2=newest_file(input_dir2,"JSR")
-        print ("Loading:",inputJSR2,end="     ")
-        
-        try:
-                wbprev = load_workbook(inputJSR2)              # primary workbook being read
-        except KeyboardInterrupt:
-                raise KeyboardInterrupt
-        except:
-                print ()
-                print ("Error loading JSR. Closing this file in excel will likely fix the problem.")
-                input ("Press 'ENTER' to close")
-                sys.exit()
-        print (" Done.")
-        
+        wbprev=trytoloadworkbook(inputJSR2)
+
         # find right worksheet in previous
         if len(wbprev.sheetnames)>1:
                 for possible_title in ["Original_All","Sheet1"]:   #acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
@@ -124,20 +105,10 @@ def main():
                 input("Press 'ENTER' to close")
                 sys.exit()
 
-        #load manhours report
+        ## locate and load manhours report
         inputMHreport=newest_file(input_dir3,"manhours report by allocation area")
-        print ("Loading:",inputMHreport,end="     ")
-        try:
-                wbmh = load_workbook(inputMHreport)
-        except KeyboardInterrupt:
-                raise KeyboardInterrupt
-        except:
-                print ()
-                print ("Error loading MH Report. Closing this file in excel will likely fix the problem.")
-                input ("Press 'ENTER' to close")
-                sys.exit()
-        print (" Done.")
-
+        wbmh=trytoloadworkbook(inputMHreport)
+        
         # find right worksheet in mh report
         if len(wbmh.sheetnames)>1:
                 for possible_title in ["manhours report by allocation a","manhours report by allocation","Sheet1"]:   #acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
@@ -152,19 +123,9 @@ def main():
                 input("Press 'ENTER' to close")
                 sys.exit()
 
-        #load 995 key
+        ## locate and load 995 key
         input995key=newest_file(input_dir3,"995 key")
-        print ("Loading:",input995key,end="     ")
-        try:
-                wbkey = load_workbook(input995key)
-        except KeyboardInterrupt:
-                raise KeyboardInterrupt
-        except:
-                print ()
-                print ("Error loading MH Report. Closing this file in excel will likely fix the problem.")
-                input ("Press 'ENTER' to close")
-                sys.exit()
-        print (" Done.")
+        wbkey=trytoloadworkbook(input995key)
 
         # find right worksheet in key
         if len(wbkey.sheetnames)>1:
@@ -224,8 +185,6 @@ def main():
         for sheet in regional_worksheet_list:
                 all_modified_worksheet_list.append(sheet.body)
         all_modified_worksheet_list.append(wsother)        
-
-
 
         # mapping data in ws1 to new format in ws2
         print ("Transferring original values into re-mapped and re-calculated spreadsheet format")
@@ -292,153 +251,143 @@ def main():
                                                         calc = calc - subtractvalue
                                                         
                                 ws2.cell(row=i+3,column=j).value = calc
-        
+        RUN995=True
         ###### here go calculations based on 995 using Key and MH Report.
-        
-        #insert key and 995 sheet
-        
-        print("Copying 995 Key")
-        insertedkeyws = wb1.create_sheet(title="995 Key")       # create a blank worksheet in the JSR file
-        copyworksheet(wskey,insertedkeyws)                      # copy data from the other worksheet
-        
-        print ("Copying MH Report")
-        insertedmhws = wb1.create_sheet(title="MH "+mhreporttimestamp)
-        copyworksheet(wsmh,insertedmhws)
+        if RUN995:
+                print("Copying 995 Key")
+                insertedkeyws = wb1.create_sheet(title="995 Key")       # create a blank worksheet in the JSR file
+                copyworksheet(wskey,insertedkeyws)                      # copy data from the other worksheet
+
+                print ("Copying MH Report")
+                insertedmhws = wb1.create_sheet(title="MH "+mhreporttimestamp)
+                copyworksheet(wsmh,insertedmhws,copyformatting=False)
+                for cell in insertedmhws[1]:       # formats with colors and wraptext
+                        cell.fill = PatternFill(start_color='d9d9d9',fill_type = "solid")   # start_color is background color, end_color is font color
+                        cell.alignment = Alignment(horizontal='left',wrap_text=True)
+                        cell.font = Font(bold=True)
                 
-        #reminder, ws2 is the "all areas" worksheet.
+                #for each row in the main worksheet
+                #get the job number
+                #and search in the MH report col D for the YTD MH in Col J
+                print ("Starting 995 calculations")
 
-        # JSR columns
-        # Q = Monthly Cost w/ current 995 and T&D
-        # R = YTD Hourly Manhours WE 0426
-        # S = Est Accruals for 995 and T&D
-        
-        # MH report columns
-        # D = "Total Business Unit 877889"
-        # J = YTD MH
+                # prevent hard-coded column references. some are still hard coded like R and J
+                ws2_costcenter_col =    column_index_from_string(get_col_from_header_name(ws2,"Cost Cntr Home"))
+                ws2_jobnum_col =        column_index_from_string(get_col_from_header_name(ws2,"Job #"))
+                ws2_YTDMH_col =         column_index_from_string(get_col_from_header_name(ws2,"YTD Hourly Manhours",3,exact=False))
+                ws2_accrual_col =       column_index_from_string(get_col_from_header_name(ws2,"Est Accruals for 995 and T&D"))
+                ws2_mocost995_col =     column_index_from_string(get_col_from_header_name(ws2,"Monthly Cost w/ current 995 and T&D"))
+                ws2_actmocost_col =     column_index_from_string(get_col_from_header_name(ws2,"Actual Monthly Cost"))
 
-        #for each row in the main worksheet
-        #get the job number
-        #and search in the MH report col D for the YTD MH in Col J
-        print ("Starting 995 calculations")
+                wsmh_busunit_col =      column_index_from_string(get_col_from_header_name(insertedmhws,"COMPANY",1))
+                wsmh_YTDMH_col =        column_index_from_string(get_col_from_header_name(insertedmhws,"CUMULATIVE",1,exact=False))
+                wsmh_allocation_col =   column_index_from_string(get_col_from_header_name(insertedmhws,"ALLOCATION AREA",1))
 
-        # prevent hard-coded column references. some are still hard coded like R and J
-        ws2_costcenter_col =    column_index_from_string(get_col_from_header_name(ws2,"Cost Cntr Home"))
-        ws2_jobnum_col =        column_index_from_string(get_col_from_header_name(ws2,"Job #"))
-        ws2_YTDMH_col =         column_index_from_string(get_col_from_header_name(ws2,"YTD Hourly Manhours",3,exact=False))
-        ws2_accrual_col =       column_index_from_string(get_col_from_header_name(ws2,"Est Accruals for 995 and T&D"))
-        ws2_mocost995_col =     column_index_from_string(get_col_from_header_name(ws2,"Monthly Cost w/ current 995 and T&D"))
-        ws2_actmocost_col =     column_index_from_string(get_col_from_header_name(ws2,"Actual Monthly Cost"))
+                wskey_costcenter_col =  column_index_from_string(get_col_from_header_name(insertedkeyws,"Cost Cntr Home",1))
+                wskey_995rate_col =     column_index_from_string(get_col_from_header_name(insertedkeyws,"Total Rate",1))
 
-                
-        wsmh_busunit_col =      column_index_from_string(get_col_from_header_name(insertedmhws,"COMPANY",1))
-        wsmh_YTDMH_col =        column_index_from_string(get_col_from_header_name(insertedmhws,"CUMULATIVE",1,exact=False))
-        wsmh_allocation_col =   column_index_from_string(get_col_from_header_name(insertedmhws,"ALLOCATION AREA",1))
-        wskey_costcenter_col =  column_index_from_string(get_col_from_header_name(insertedkeyws,"Cost Cntr Home",1))
-        wskey_995rate_col =     column_index_from_string(get_col_from_header_name(insertedkeyws,"Total Rate",1))
+                list_of_995_numbers = [
+                        ["6008995","250"],
+                        ["6009995","277"],
+                        ["6010995","251"],
+                        ["6012995","252"],
+                        ["6013995","253"],
+                        ["6014995","254"],
+                        ["6015995","255"],
+                        ["6017995","256"],
+                        ["6018995","257"],
+                        ["6019995","258"],
+                        ["6020995","259"],
+                        ["6021995","260"],
+                        ["6022995","261"],
+                        ["6023995","262"],
+                        ["6024995","263"],
+                        ["6025995","264"],
+                        ["6026995","265"],
+                        ["6027995","266"],
+                        ["6028995","267"],
+                        ["6029995","268"],
+                        ["6031995","269"],
+                        ["6032995","270"],
+                        #["6033995","271"], Water treatment is ignored
+                        ["6040995","272"],
+                        ["6041995","273"],
+                        ["6401995","274"],
+                        ["6402995","275"],
+                        ["6403995","276"],]
 
-
-        list_of_995_numbers = [
-                ["6008995","250"],
-                ["6009995","277"],
-                ["6010995","251"],
-                ["6012995","252"],
-                ["6013995","253"],
-                ["6014995","254"],
-                ["6015995","255"],
-                ["6017995","256"],
-                ["6018995","257"],
-                ["6019995","258"],
-                ["6020995","259"],
-                ["6021995","260"],
-                ["6022995","261"],
-                ["6023995","262"],
-                ["6024995","263"],
-                ["6025995","264"],
-                ["6026995","265"],
-                ["6027995","266"],
-                ["6028995","267"],
-                ["6029995","268"],
-                ["6031995","269"],
-                ["6032995","270"],
-                #["6033995","271"], Water treatment is ignored
-                ["6040995","272"],
-                ["6041995","273"],
-                ["6401995","274"],
-                ["6402995","275"],
-                ["6403995","276"],]
-
-        
-
-        for j in range(4,ws2.max_row):
-                if j%500==0: print("... on row",j,"of",ws2.max_row)     # progress bar
-                
-                jobnumber=ws2.cell(row=j, column=ws2_jobnum_col).value  # load job number for this row
-                if jobnumber:
-                        manhours=False          # Identifies if this has any MH in it
-                        areasupervision=False   # Identifies if this is 995 number
-
-                        for item in list_of_995_numbers:
-                                if item[0] == jobnumber:
-                                        areasupervision=item[1]
-                                        break
-
-                        for i in range (1,insertedmhws.max_row):
-
-                                # this if-else finds and enters the manhours
-                                if areasupervision:
-                                        # calculate 995 as region supervision number.
-                                        mhreport_allocation = insertedmhws.cell(row=i, column=wsmh_allocation_col).value
-                                        if mhreport_allocation == "Total "+areasupervision:
-                                                manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
-                                                manhours = manhourcell.value
-                                                ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
-                                                break
-                                else:
-                                        # calculate 995 as normal job number.
-                                        mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
-                                        if mhreport_jobnumber == "Total Business Unit "+jobnumber:
-                                                manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
-                                                manhours = manhourcell.value
-                                                ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
-                                                break
-
-                        ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value        # this is the cost center for the current job number ie " REDLANDS - WA"
+                for j in range(4,ws2.max_row):
+                        if j%500==0: print("... on row",j,"of",ws2.max_row)     # progress bar
                         
-                        if "WATER TREATMENT" in ws2costcenter:
-                                ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
-                                ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
-                        elif manhours:
-                                # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
-                                for x in range (1,insertedkeyws.max_row):
-                                        key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
-                                        if key_costcenter == ws2costcenter:                                                        
-                                                rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
-                                                
-                                                #accrual_formula = "="+"'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
-                                                accrual_formula = "'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
-                                                if areasupervision:
-                                                        accrual_formula = "=-"+accrual_formula   #areasupervision 995 numbers should be negative
-                                                else:
-                                                        accrual_formula = "="+accrual_formula
-                                                
-                                                ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
+                        jobnumber=ws2.cell(row=j, column=ws2_jobnum_col).value  # load job number for this row
+                        if jobnumber:
+                                manhours=False          # Identifies if this has any MH in it, put # manhours into this
+                                areasupervision=False   # Identifies if this is 995 number, allocation area code into this
 
-                                                #this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
-                                                temp_rate995 = wskey.cell(row=x, column=5)
-                                                temp_ratetnd = wskey.cell(row=x, column=6)
-                                                if not areasupervision: #do not calculate column Q for 995 job numbers
-                                                        try:
-                                                                ws2.cell(row=j, column=ws2_mocost995_col).value = (temp_rate995.value + temp_ratetnd.value)*manhours + ws2.cell(row=j, column=ws2_actmocost_col).value
-                                                        except:
-                                                                ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
+                                for item in list_of_995_numbers:
+                                        if item[0] == jobnumber:
+                                                areasupervision=item[1]
+                                                break
+
+                                for i in range (1,insertedmhws.max_row+1):
+
+                                        # this if-else finds and enters the manhours
+                                        if areasupervision:
+                                                # calculate 995 as region supervision number.
+                                                mhreport_allocation = insertedmhws.cell(row=i, column=wsmh_allocation_col).value
+                                                if mhreport_allocation == "Total "+areasupervision:
+                                                        manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
+                                                        manhours = manhourcell.value
+                                                        ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
                                                         break
-                                            
+                                        else:
+                                                # calculate 995 as normal job number.
+                                                mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
+                                                if mhreport_jobnumber == "Total Business Unit "+jobnumber:
+                                                        manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
+                                                        manhours = manhourcell.value
+                                                        ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
+                                                        break
+
+                                ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value        # this is the cost center for the current job number ie " REDLANDS - WA"
+                                
+                                if "WATER TREATMENT" in ws2costcenter:
+                                        ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
+                                        ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="808080")
+                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
+                                        ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="808080")
+                                elif manhours:
+                                        # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
+                                        for x in range (1,insertedkeyws.max_row+1):
+                                                key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
+                                                if key_costcenter == ws2costcenter:                                                        
+                                                        rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
+                                                        
+                                                        #accrual_formula = "="+"'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                        accrual_formula = "'"+insertedmhws.title+"'!"+manhourcell.coordinate+"*'995 Key'!"+rate995.coordinate
+                                                        if areasupervision:
+                                                                accrual_formula = "=-"+accrual_formula   #areasupervision 995 numbers should be negative
+                                                        else:
+                                                                accrual_formula = "="+accrual_formula
+                                                        
+                                                        ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
+
+                                                        #this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
+                                                        temp_rate995 = wskey.cell(row=x, column=5)
+                                                        temp_ratetnd = wskey.cell(row=x, column=6)
+                                                        if not areasupervision: #do not calculate column Q for 995 job numbers
+                                                                try:
+                                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = (temp_rate995.value + temp_ratetnd.value)*manhours + ws2.cell(row=j, column=ws2_actmocost_col).value
+                                                                except:
+                                                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
+                                                                break
+                                                if x == insertedkeyws.max_row+1: print("failed to find any region code for job number",jobnumber)
+                                                    
+                ####### end of 995 calculations
         
-        ####### end oif 995 calculations
-        
-        ##########################################################################
-        ######### CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS GO HERE#######
-        ##########################################################################                        
+        ############################################################################
+        ######### CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS GO HERE ########
+        ############################################################################
         #
         #This is where we do special rules for worksheet modified_all
         #
@@ -482,10 +431,11 @@ def main():
                         if worksheet.code in row[col_region].value:             # copy to regional sheet if code matches
                                 nextrow=worksheet.body.max_row+1
                                 for cell in row:
-                                        if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
+                                        if xcol(cell.column)>65: break        # don't do this past column 75, wasteful.
                                         new_cell = worksheet.body.cell(row=nextrow, column=cell.col_idx, value= cell.value)
                                         if cell.has_style:
                                                 new_cell.border = copy(cell.border)
+                                                new_cell.font = copy(cell.font)
                                                 new_cell.fill = copy(cell.fill)
                                                 new_cell.number_format = copy(cell.number_format)
                                                 new_cell.comment = copy(cell.comment)
@@ -497,10 +447,11 @@ def main():
                         nextrow=wsother.max_row+1
                         #print (row[col_region].value,"- Other")
                         for cell in row:
-                                if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
+                                if xcol(cell.column)>65: break        # don't do this past column 75, wasteful.
                                 new_cell = wsother.cell(row=nextrow, column=cell.col_idx, value= cell.value)
                                 if cell.has_style:
                                         new_cell.border = copy(cell.border)
+                                        new_cell.font = copy(cell.font)
                                         new_cell.fill = copy(cell.fill)
                                         new_cell.number_format = copy(cell.number_format)
                                         new_cell.comment = copy(cell.comment)
@@ -519,11 +470,14 @@ def main():
                 #print("Hiding TBD columns")
                 for col in ['B', 'AU', 'AW', 'BC']:
                         sheet.column_dimensions[col].hidden= True
+                        
                 # hide row 2. Row 1 is left for old header titles .
                 for row in [1]:
                         sheet.row_dimensions[row].hidden= True
+                        
                 # freezing pane
                 sheet.freeze_panes = sheet['A4']
+                
                 #print("Adjusting Column Widths")
                 for i in range(46,57):
                         sheet.column_dimensions[get_column_letter(i)].width = 15
@@ -538,23 +492,19 @@ def main():
                 #conditional formatting to highlight subtotals
                 # this finds rows with "Total" in column A and has an equation in col F, which is pretty unique to subtotal rows
                 # subtotals will be activated during macro portion because openpyxl does not support it.
-                #grey_fill = PatternFill(bgColor="aaaaaa")
-                #black_font = 
-                #dxf = DifferentialStyle(fill=grey_fill, font=black_font)
-                #r = Rule(type="expression", font=black_font, fill=grey_fill, dxf=dxf, stopIfTrue=True)
-                #r.formula = ['=AND(ISNUMBER(SEARCH(" Total",$A4)),ISFORMULA($F4))']
-                sheet.conditional_formatting.add("A1:BE5000",
-                        FormulaRule(formula=['AND(ISNUMBER(SEARCH(" Total",$A1)),ISFORMULA($F1))'],
+                # this conditional formatting doesn't work until needs user (or macro) goes in and click "apply formatting".
+                sheet.conditional_formatting.add("A1:BG5000",
+                        FormulaRule(formula=['=AND(ISNUMBER(SEARCH(" Total",$A1)),ISFORMULA($F1))'],
                                 stopIfTrue=True,
                                 font=Font(color="000000"),
                                 fill=PatternFill(bgColor="aaaaaa") )
-                        )                                         
-                # this conditional formatting doesn't work until needs user (or macro) goes in and click "apply formatting".
-
+                        )
+                # cant use conditional formatting or else it destroys red-flagged cells                
+                
         # move original sheet to end 
         move_sheet(wb1,0,len(wb1._sheets)-1)
-
-        # format and include prev month sheet
+        
+        # format and copy over prev month sheet
         prevworksheet = wb1.create_sheet(title="Original_Prev_All")
         for row in wsprev.iter_rows():
                 prevworksheet.append(cell.value for cell in row)
@@ -562,8 +512,6 @@ def main():
                 cell.fill = PatternFill(start_color='5B9BD5',fill_type = "solid")   # start_color is background color, end_color is font color
                 cell.alignment = Alignment(wrap_text=True)
                 cell.font = Font(color="FFFFFF",bold=True)
-        if not DEBUG:
-                highlight_alternate_rows(prevworksheet)
         
         prevworksheet['B2'].value = oldJSRtimestamp
         
@@ -607,23 +555,33 @@ def main():
                         sys.exit(0)
                         
         print()
-        #print("savefile =",savefile)
-        #print("save_file_name",save_file_name)
         AUTOMATE_EXCEL_FORMATTING(savefile,save_file_name)
         input("Script complete. Press 'ENTER' to close")
 
-def copyworksheet(source,destination):
-        #maxrow is int type. optional value to optimize the copy worksheet to make sure it doesn't go past a particular column
-        for row in source:         
+def trytoloadworkbook(address):
+        print ("Loading:",address,end="     ")
+        try:
+                a = load_workbook(address)
+        except KeyboardInterrupt:
+                raise KeyboardInterrupt
+        except:
+                print ("Loading Error. Closing this file in excel will likely fix the problem.")
+                input ("Press 'ENTER' to close")
+                sys.exit()
+        print (" Done.")
+        return a
+
+def copyworksheet(source,destination,copyformatting=True):
+        for row in source:
                 for cell in row:
-                        destination[cell.coordinate].value = cell.value                        
-                        if cell.has_style:
-                                destination[cell.coordinate].border = copy(cell.border)
-                                destination[cell.coordinate].font = copy(cell.font)
+                        destination[cell.coordinate].value = cell.value
+                        if copyformatting:
                                 destination[cell.coordinate].fill = copy(cell.fill)
                                 destination[cell.coordinate].number_format = copy(cell.number_format)
-                                destination[cell.coordinate].comment = copy(cell.comment)
                                 destination[cell.coordinate].alignment = copy(cell.alignment)
+                                destination[cell.coordinate].font = copy(cell.font)
+                                #destination[cell.coordinate].comment = copy(cell.comment)
+                                
         for idx, rd in source.row_dimensions.items():
                 destination.row_dimensions[idx] = copy(rd)
         for idx, rd in source.column_dimensions.items():
@@ -679,28 +637,32 @@ def move_sheet(wb, from_loc=None, to_loc=None):
 
 
 def highlight_alternate_rows(worksheet):
-        borderstyle =  Border(top=Side(style='thin',color="9BC2E6"), bottom=Side(style='thin',color="9BC2E6"))
-        fillstyle =    PatternFill(start_color='ddebf7',fill_type = "solid")
+        blue_borderstyle =  Border(top=Side(style='thin',color="9BC2E6"), bottom=Side(style='thin',color="9BC2E6"))
+        blue_fillstyle =    PatternFill(start_color='ddebf7',fill_type = "solid")
+        gray_borderstyle =  Border(top=Side(style='thin',color="bfbfbf"), bottom=Side(style='thin',color="bfbfbf"))
+        gray_fillstyle =  PatternFill(start_color='b4b4b4',fill_type = "solid")
         
-        for i in range (5,worksheet.max_row,2):    # skip first 3(or 4) lines
-                worksheet.row_dimensions[i].fill = fillstyle
-                worksheet.row_dimensions[i].border = borderstyle
-        
-        for i in range (4,worksheet.max_row):    # skip first 3(or 4) lines
-                if i%100==0:
-                        #print(".",end="")
-                        sys.stdout.write(".")
-                        sys.stdout.flush()
-                for cell in worksheet[i]:       # for each cell in this row
-                        if xcol(cell.column)>75: break        # don't do this past column 75, wasteful.
-                        if cell.column in ['Q','R','S']:        # special highlighting for 995 columns
-                                cell.fill = PatternFill(start_color='b4b4b4',fill_type = "solid")
-                                cell.border =  Border(top=Side(style='thin',color="bfbfbf"), bottom=Side(style='thin',color="bfbfbf"))
-                        elif i%2==1:  # on odd rows and cells without default fill
-                                if cell.fill.start_color.rgb is "00000000":
-                                        cell.fill = fillstyle
-                                        cell.border = borderstyle
-                        if cell.value==0 and cell.column!="Y":  # don't apply gray formatting to zeros in billing column
+        #for i in range (5,worksheet.max_row,2):    # skip first 3(or 4) lines
+                #worksheet.row_dimensions[i].fill = blue_fillstyle
+                #worksheet.row_dimensions[i].border = blue_borderstyle
+
+        for i in range (4,worksheet.max_row+1):    # go through every row, every cell. start on line 4
+                
+                if i%100==0: print(".",end="") # progress bar
+                        
+                for cell in worksheet[i]:
+                        
+                        if xcol(cell.column)>60: break                          # don't go past column 60, wasteful.
+                        
+                        if cell.column in ['Q','R','S']:                        # special highlighting for 995 columns
+                                cell.fill = gray_fillstyle
+                                cell.border =  gray_borderstyle
+                        elif i%2==1:                                            # highlight cells on odd rows
+                                if cell.fill.start_color.rgb is "00000000":     # check if cell color is default, this step is necessary to avoid filling red-flagged cells 
+                                        cell.fill = blue_fillstyle
+                                        cell.border = blue_borderstyle
+                                        
+                        if cell.value==0 and cell.column!="Y":                  # apply gray formatting to zeros, except in billing column Y
                                 cell.font = Font(color="b2b2b2")
                         
 
