@@ -1,11 +1,17 @@
 # Specific Files and Folders #
 ##############################
-build/
-dist
-old files folder (not needed for script)/
-JSRformatter.spec
-git shortcut.txt
+code/build/
+code/dist
+code/old files folder (not needed for script)/
+code/JSRformatter.spec
+code/git shortcut.txt
+
 __pycache__
+input MH/*.xls*
+input new JSR/*.xls*
+input prev JSR/*.xls*
+output/*/*
+venv/
 
 # Compiled source #
 ###################

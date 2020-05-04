@@ -1,5 +1,6 @@
 import pyautogui # for keyboard macro control
 import win32gui # to switch windows
+import keyboard
 import os
 import time
 import sys
