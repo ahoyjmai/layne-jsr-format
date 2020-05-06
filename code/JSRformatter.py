@@ -2,9 +2,11 @@ print("Loading...")
 import datetime
 import os
 import sys
+import signal
+import time
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string, get_column_letter
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
+from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.comments import Comment
 from copy import copy
@@ -64,8 +66,8 @@ Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 Written by Jonathan Mai on 8/7/2019
 """
-Last_Updated = "Last Updated 5/1/2020"
-Version_Number = "Version v1.6"
+Last_Updated = "Last Updated 5/6/2020"
+Version_Number = "Version v1.7"
 
 
 def main():
@@ -96,11 +98,13 @@ def main():
         for possible_title in ["Original_All",
                                "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
             if possible_title in wbprev.sheetnames:
-                if wbprev[possible_title]['A3'].value == "Contract Type" and wbprev[possible_title]['B3'].value == "Business Unit Type":
+                if wbprev[possible_title]['A3'].value == "Contract Type" and wbprev[possible_title][
+                    'B3'].value == "Business Unit Type":
                     # the powerBI JSR format has these values in headers
                     wsprev = wbprev[possible_title]
                     break  # once you find it stop searching
-    elif wbprev[wbprev.sheetnames[0]]['A3'].value == "Contract Type":  # the correct format should have 'contract type' in the 3rd line first column
+    elif wbprev[wbprev.sheetnames[0]][
+        'A3'].value == "Contract Type":  # the correct format should have 'contract type' in the 3rd line first column
         wsprev = wbprev[wbprev.sheetnames[0]]
     else:
         print("Unexpected workbook format, not sure which sheet to use for PREVIOUS MONTH")
@@ -116,10 +120,12 @@ def main():
         for possible_title in ["manhours report by allocation a", "manhours report by allocation",
                                "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
             if possible_title in wbmh.sheetnames:
-                if wbmh[possible_title]['A1'].value == "ALLOCATION AREA" and wbmh[possible_title]['H1'].value == "SUBSIDIARY":  # If these headers are here, this is the right sheet
+                if wbmh[possible_title]['A1'].value == "ALLOCATION AREA" and wbmh[possible_title][
+                    'H1'].value == "SUBSIDIARY":  # If these headers are here, this is the right sheet
                     wsmh = wbmh[possible_title]
                     break  # once you find it stop searching
-    elif wbmh[wbmh.sheetnames[0]]['A1'].value == "ALLOCATION AREA":  # the correct format should have 'contract type' in the 3rd line first column
+    elif wbmh[wbmh.sheetnames[0]][
+        'A1'].value == "ALLOCATION AREA":  # the correct format should have 'contract type' in the 3rd line first column
         wsmh = wbmh[wbmh.sheetnames[0]]
     else:
         print("Could not find correct sheet in Manhours Report")
@@ -135,10 +141,12 @@ def main():
         for possible_title in ["key", "KEY", "Key",
                                "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
             if possible_title in wbkey.sheetnames:
-                if wbkey[possible_title]['C1'].value == "Cost Cntr Home" and wbkey[possible_title]['G1'].value == "Total Rate":  # If these headers are here, this is the right sheet
+                if wbkey[possible_title]['C1'].value == "Cost Cntr Home" and wbkey[possible_title][
+                    'G1'].value == "Total Rate":  # If these headers are here, this is the right sheet
                     wskey = wbkey[possible_title]
                     break  # once you find it stop searching
-    elif wbkey[wbkey.sheetnames[0]]['G1'].value == "Total Rate":  # the correct format should have 'contract type' in the 3rd line first column
+    elif wbkey[wbkey.sheetnames[0]][
+        'G1'].value == "Total Rate":  # the correct format should have 'contract type' in the 3rd line first column
         wskey = wbkey[wbkey.sheetnames[0]]
     else:
         print("Could not find correct sheet in 995 Key")
@@ -166,8 +174,6 @@ def main():
         DEBUG = True
         print(
             "ACTIVATING DEBUG (FAST) MODE: 70% of rows are skipped. Alternate row highlighting is disabled to let script run faster.")
-
-
 
     if DEBUG:
         CALC995 = "NORMAL"
@@ -204,19 +210,19 @@ def main():
         newWorksheet("Treatment590", "590", wb1, mhreporttimestamp),
     ]
     """
-    central_costctrs   = ['KANSAS CITY','OMAHA','WICHITA','GUTHRIE','DENVER']
+    central_costctrs = ['KANSAS CITY', 'OMAHA', 'WICHITA', 'GUTHRIE', 'DENVER']
     southeast_costctrs = ['FT. MYERS', 'STUTTGART', 'MEMPHIS', 'RAYNE', 'PENSACOLA',
                           'PRAIRIEVILLE', 'ALBANY', 'SAVANNAH', 'JACKSON', 'HOUSTON',
-                          'MIDLAND','PLEASANTON']
+                          'MIDLAND', 'PLEASANTON']
     northeast_costctrs = ['AURORA', 'ST. LOUIS', 'LONG ISLAND', 'COLLECTOR WELLS', 'BEVERLY',
                           'SCHOHARIE', 'MIDDLETOWN', 'LOUISVILLE', 'WAUSAU', 'HEAVY CIVIL']
-    west_costctrs =      ['CHANDLER', 'HANFORD', 'REDLANDS', 'WATER TREATMENT']
+    west_costctrs = ['CHANDLER', 'HANFORD', 'REDLANDS', 'WATER TREATMENT']
 
     regional_worksheet_list = [
-        newWorksheet("West", west_costctrs, wb1, mhreporttimestamp,'red'),
-        newWorksheet("Central", central_costctrs, wb1, mhreporttimestamp,'yellow'),
-        newWorksheet("SouthEast", southeast_costctrs, wb1, mhreporttimestamp,'green'),
-        newWorksheet("NorthEast", northeast_costctrs, wb1, mhreporttimestamp,'blue'),
+        newWorksheet("West", west_costctrs, wb1, mhreporttimestamp, 'red'),
+        newWorksheet("Central", central_costctrs, wb1, mhreporttimestamp, 'yellow'),
+        newWorksheet("SouthEast", southeast_costctrs, wb1, mhreporttimestamp, 'green'),
+        newWorksheet("NorthEast", northeast_costctrs, wb1, mhreporttimestamp, 'blue'),
     ]
 
     wsother = newsheetwithheaders(wb1, "Other", HEADERMAP, mhreporttimestamp)
@@ -309,7 +315,7 @@ def main():
         cell.alignment = Alignment(horizontal='left', wrap_text=True)
         cell.font = Font(bold=True)
 
-    if CALC995 in ["SKIPCOLQ","NORMAL"]:
+    if CALC995 in ["SKIPCOLQ", "NORMAL"]:
 
         # for each row in the main worksheet
         # get the job number
@@ -396,7 +402,7 @@ def main():
                             ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
                             break
 
-                ws2costcenter = ws2.cell(row=j,column=ws2_costcenter_col).value
+                ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value
                 # this is the cost center for the current job number ie " REDLANDS - WA"
 
                 if "WATER TREATMENT" in ws2costcenter:
@@ -412,7 +418,7 @@ def main():
                             rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
                             rateTND = insertedkeyws.cell(row=x, column=wskey_TNDrate_col)
 
-                            #Column S calculation
+                            # Column S calculation
                             if areasupervision:
                                 accrual_formula = "=-'" + insertedmhws.title + "'!" + manhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
 
@@ -428,11 +434,13 @@ def main():
                                 try:
                                     if areasupervision:
                                         # negative numbers for areasupervision codes
-                                        temp_rate995 = rate995.value # do not include TND for areasupervision
-                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j, column=ws2_actmocost_col).value - temp_rate995 * manhours
+                                        temp_rate995 = rate995.value  # do not include TND for areasupervision
+                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,
+                                                                                                   column=ws2_actmocost_col).value - temp_rate995 * manhours
                                     else:
                                         temp_rate995 = rate995.value + rateTND.value
-                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j, column=ws2_actmocost_col).value + temp_rate995 * manhours
+                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,
+                                                                                                   column=ws2_actmocost_col).value + temp_rate995 * manhours
                                 except:
                                     ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
                             break
@@ -470,13 +478,13 @@ def main():
     print("Now splitting formatted spreadsheet into regional sheets")
 
     # split data from newly mapped sheet into multiple regional sheets
-    col_region = get_col_from_header_name(ws2, "Area")-1
+    # col_region = get_col_from_header_name(ws2, "Area")-1
     col_costcntr = get_col_from_header_name(ws2, "Cost Cntr Home") - 1
 
     for i, row in enumerate(ws2.iter_rows(), 1):
         if i <= 3:  # skip the first 3 rows
             continue
-        #if row[col_region].value is None:  # Col AV contains the region code
+        # if row[col_region].value is None:  # Col AV contains the region code
         if row[col_costcntr].value is None:  # Col AX contains the region code
             print(row, "did not have a col region value")
             continue
@@ -485,7 +493,7 @@ def main():
 
         putinother = True
         for worksheet in regional_worksheet_list:
-            #if worksheet.code in row[col_region].value:  # copy to regional sheet if code matches
+            # if worksheet.code in row[col_region].value:  # copy to regional sheet if code matches
             if any(s in row[col_costcntr].value for s in worksheet.code):  # copy to regional sheet if code matches
                 nextrow = worksheet.body.max_row + 1
                 for cell in row:
@@ -522,7 +530,7 @@ def main():
     countdown = len(all_modified_worksheet_list)
     for sheet in all_modified_worksheet_list:
         print(countdown, end="")
-        #print(countdown,sheet.title,end="")
+        # print(countdown,sheet.title,end="")
         countdown = countdown - 1
         # print("Highlighting alternate rows")
         if not DEBUG:
@@ -533,7 +541,7 @@ def main():
             sheet.column_dimensions[col].hidden = True
 
         # hide QRS column if 995 was skipped
-        if CALC995 == "SKIPALL995"
+        if CALC995 == "SKIPALL995":
             for col in ['Q', 'R', 'S']:
                 sheet.column_dimensions[col].hidden = True
 
@@ -700,7 +708,7 @@ def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp, color=""):
             worksheet.sheet_properties.tabColor = 'd3bcf2'
         elif color.lower() == 'orange':
             worksheet.sheet_properties.tabColor = 'f3d8bb'
-        else :
+        else:
             worksheet.sheet_properties.tabColor = color
 
     return worksheet
@@ -886,7 +894,8 @@ def mark_billings_over_contract_value(row):
                 row[xcol("F")].comment = Comment(commenttext, "JMai")
                 row[xcol("F")].fill = Redfillstyle
                 return True
-            elif row[xcol("O")].value * 1.22 > row[xcol("F")].value and row[xcol("O")].value > row[xcol("F")].value + threshold:
+            elif row[xcol("O")].value * 1.22 > row[xcol("F")].value and row[xcol("O")].value > row[
+                xcol("F")].value + threshold:
                 # apply level 2 only if it is a CJ job
                 if row[xcol("A")].value == "CJ":
                     commenttext = "Revenue accrual based on actual costs is lower than an 18% margin. Possible CO needed."

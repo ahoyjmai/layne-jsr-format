@@ -197,10 +197,10 @@ def KEYBOARD_MACRO_START():
         time.sleep(1)
         move_to_last_worksheet()
         go_back_x_sheets(5)
-        for k in range(6):      #do this 6 times for 6 sheets (All areas + Other + 4 other sheets)
+        for k in range(5):      #do this 5 times for  sheets (All areas + 4 regional sheets)
                 #print("Starting sheet #",k,"...",end="")
                 j=k+1
-                sys.stdout.write("Starting sheet %s of 7... " % j)
+                sys.stdout.write("Starting sheet %s of 5... " % j)
                 sys.stdout.flush()
                 add_subtotals()
                 add_formatting()
