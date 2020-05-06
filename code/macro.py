@@ -61,6 +61,7 @@ def add_subtotals():
         pyautogui.press('a')
         pyautogui.press('b')
         pyautogui.keyUp('alt')
+        time.sleep(0.5)
         pyautogui.PAUSE=regularspeed
 
         # set to 'sum' instead of 'count'
@@ -198,7 +199,6 @@ def KEYBOARD_MACRO_START():
         move_to_last_worksheet()
         go_back_x_sheets(5)
         for k in range(5):      #do this 5 times for  sheets (All areas + 4 regional sheets)
-                #print("Starting sheet #",k,"...",end="")
                 j=k+1
                 sys.stdout.write("Starting sheet %s of 5... " % j)
                 sys.stdout.flush()

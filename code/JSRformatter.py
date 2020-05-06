@@ -446,8 +446,9 @@ def main():
                             break
                         if x == insertedkeyws.max_row + 1:
                             print("failed to find any region code for job number ", jobnumber)
-
-        ####### end of 995 calculations
+    else:
+        print("Skipping 995 calculations.")
+    ####### end of 995 calculations
 
     ############################################################################
     ######### CONDITIONAL FORMATTING AND SPECIALTY CALCULATIONS GO HERE ########
@@ -497,7 +498,7 @@ def main():
             if any(s in row[col_costcntr].value for s in worksheet.code):  # copy to regional sheet if code matches
                 nextrow = worksheet.body.max_row + 1
                 for cell in row:
-                    if cell.column > 65:
+                    if cell.col_idx > 65:
                         break  # don't do this past column 65, wasteful.
                     new_cell = worksheet.body.cell(row=nextrow, column=cell.col_idx, value=cell.value)
                     if cell.has_style:
@@ -514,7 +515,7 @@ def main():
             nextrow = wsother.max_row + 1
             # print (row[col_region].value,"- Other")
             for cell in row:
-                if cell.column > 65:
+                if cell.col_idx > 65:
                     break  # don't do this past column 65, wasteful.
                 new_cell = wsother.cell(row=nextrow, column=cell.col_idx, value=cell.value)
                 if cell.has_style:
@@ -529,7 +530,9 @@ def main():
     # this takes a while to execute so hide comment it out when running if you're not specifically testing it
     countdown = len(all_modified_worksheet_list)
     for sheet in all_modified_worksheet_list:
-        print(countdown, end="")
+        sys.stdout.write(str(countdown))
+        sys.stdout.flush()
+        # print(countdown, end="")
         # print(countdown,sheet.title,end="")
         countdown = countdown - 1
         # print("Highlighting alternate rows")
@@ -643,6 +646,8 @@ def trytoloadworkbook(address):
         print("Loading Error. Closing this file in excel will likely fix the problem.")
         input("Press 'ENTER' to close")
         sys.exit()
+
+
     print(" Done.")
     return a
 
@@ -690,10 +695,9 @@ def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp, color=""):
                                 fill_type="solid")  # start_color is background color, end_color is font color
         cell.alignment = Alignment(wrap_text=True)
         cell.font = Font(color="FFFFFF", bold=True)
-        if get_column_letter(cell.column) in ['Q', 'R', 'S']:
+        if get_column_letter(cell.col_idx) in ['Q', 'R', 'S']:
             cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
-
     # color tabs
     if color != "" and type(color) == str:
         if color.lower() == 'green':
@@ -748,15 +752,17 @@ def highlight_alternate_rows(worksheet):
 
     for i in range(4, worksheet.max_row + 1):  # go through every row, every cell. start on line 4
 
-        if i % 100 == 0:
-            print(".", end="")  # progress bar
+        if i % 100 == 0:    # progress bar
+            sys.stdout.write(".")
+            sys.stdout.flush()
+            #print(".", end="")
 
         for cell in worksheet[i]:
 
-            if cell.column > 60:
+            if cell.col_idx > 60:
                 break  # don't go past column 60, wasteful.
 
-            if get_column_letter(cell.column) in ['Q', 'R', 'S']:  # special highlighting for 995 columns
+            if get_column_letter(cell.col_idx) in ['Q', 'R', 'S']:  # special highlighting for 995 columns
                 cell.fill = gray_fillstyle
                 cell.border = gray_borderstyle
             elif i % 2 == 1:  # highlight cells on odd rows
@@ -947,10 +953,10 @@ def get_col_from_header_name(ws, headername, header_row=3, exact=True):
     for cell in ws[header_row]:
         if exact:
             if headername.lower() == cell.value.lower():
-                return cell.column
+                return cell.col_idx
         else:
             if headername.lower() in cell.value.lower():
-                return cell.column
+                return cell.col_idx
 
 
 ###############################################

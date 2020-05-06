@@ -4,7 +4,7 @@ code/build/
 code/dist
 code/old files folder (not needed for script)/
 code/JSRformatter.spec
-code/git shortcut.txt
+
 
 __pycache__
 input MH/*.xls*

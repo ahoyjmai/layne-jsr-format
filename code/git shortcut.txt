@@ -1,0 +1,10 @@
+upload to github
+cd c:/Users/Jonathan.Mai/Documents/JSR/python/JSR\ formatter/code/
+shift-insert to paste
+
+compile exe
+cmd
+cd directory from explorer bar ie 
+	C:\Users\Jonathan.Mai\PycharmProjects\layne-jsr-format2\code
+pyinstaller JSRformatter.py --onefile
+
