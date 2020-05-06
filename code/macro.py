@@ -197,7 +197,7 @@ def KEYBOARD_MACRO_START():
         time.sleep(1)
         move_to_last_worksheet()
         go_back_x_sheets(5)
-        for k in range(7):      #do this 7 times because there are 7 sheets that need formatting
+        for k in range(6):      #do this 6 times for 6 sheets (All areas + Other + 4 other sheets)
                 #print("Starting sheet #",k,"...",end="")
                 j=k+1
                 sys.stdout.write("Starting sheet %s of 7... " % j)

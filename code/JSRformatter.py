@@ -37,6 +37,8 @@ unexpected additions to input spreadsheets will cause this script to malfunction
 equations are hard-coded in HEADERMAP
 
 version Notes
+v1.7
+ fixed 995 calcs, user has option to skip 995 calcs or col Q. Changed regions to Central/NE/SE/Central, eliminated SW
 
 v1.6
  First version allowing 995 calcs. requires two new input files to put into a folder from adam. a YTD MH report
@@ -191,6 +193,8 @@ def main():
 
     # create all the new worksheets
     ws2 = newsheetwithheaders(wb1, "All Areas", HEADERMAP, mhreporttimestamp)
+
+    """
     regional_worksheet_list = [
         newWorksheet("West591", "591", wb1, mhreporttimestamp),
         newWorksheet("Southwest592", "592", wb1, mhreporttimestamp),
@@ -199,6 +203,22 @@ def main():
         newWorksheet("NorthEast588", "588", wb1, mhreporttimestamp),
         newWorksheet("Treatment590", "590", wb1, mhreporttimestamp),
     ]
+    """
+    central_costctrs   = ['KANSAS CITY','OMAHA','WICHITA','GUTHRIE','DENVER']
+    southeast_costctrs = ['FT. MYERS', 'STUTTGART', 'MEMPHIS', 'RAYNE', 'PENSACOLA',
+                          'PRAIRIEVILLE', 'ALBANY', 'SAVANNAH', 'JACKSON', 'HOUSTON',
+                          'MIDLAND','PLEASANTON']
+    northeast_costctrs = ['AURORA', 'ST. LOUIS', 'LONG ISLAND', 'COLLECTOR WELLS', 'BEVERLY',
+                          'SCHOHARIE', 'MIDDLETOWN', 'LOUISVILLE', 'WAUSAU', 'HEAVY CIVIL']
+    west_costctrs =      ['CHANDLER', 'HANFORD', 'REDLANDS', 'WATER TREATMENT']
+
+    regional_worksheet_list = [
+        newWorksheet("West", west_costctrs, wb1, mhreporttimestamp,'red'),
+        newWorksheet("Central", central_costctrs, wb1, mhreporttimestamp,'yellow'),
+        newWorksheet("SouthEast", southeast_costctrs, wb1, mhreporttimestamp,'green'),
+        newWorksheet("NorthEast", northeast_costctrs, wb1, mhreporttimestamp,'blue'),
+    ]
+
     wsother = newsheetwithheaders(wb1, "Other", HEADERMAP, mhreporttimestamp)
 
     # setting up a list of all worksheets for convenience
@@ -450,13 +470,14 @@ def main():
     print("Now splitting formatted spreadsheet into regional sheets")
 
     # split data from newly mapped sheet into multiple regional sheets
-    # col_region=xcol(get_col_from_header_name(ws2,"Area"))
     col_region = get_col_from_header_name(ws2, "Area")-1
+    col_costcntr = get_col_from_header_name(ws2, "Cost Cntr Home") - 1
 
     for i, row in enumerate(ws2.iter_rows(), 1):
         if i <= 3:  # skip the first 3 rows
             continue
-        if row[col_region].value is None:  # Col AV contains the region code
+        #if row[col_region].value is None:  # Col AV contains the region code
+        if row[col_costcntr].value is None:  # Col AX contains the region code
             print(row, "did not have a col region value")
             continue
         if i % 500 == 0:
@@ -464,7 +485,8 @@ def main():
 
         putinother = True
         for worksheet in regional_worksheet_list:
-            if worksheet.code in row[col_region].value:  # copy to regional sheet if code matches
+            #if worksheet.code in row[col_region].value:  # copy to regional sheet if code matches
+            if any(s in row[col_costcntr].value for s in worksheet.code):  # copy to regional sheet if code matches
                 nextrow = worksheet.body.max_row + 1
                 for cell in row:
                     if cell.column > 65:
@@ -500,6 +522,7 @@ def main():
     countdown = len(all_modified_worksheet_list)
     for sheet in all_modified_worksheet_list:
         print(countdown, end="")
+        #print(countdown,sheet.title,end="")
         countdown = countdown - 1
         # print("Highlighting alternate rows")
         if not DEBUG:
@@ -508,6 +531,11 @@ def main():
         # print("Hiding TBD columns")
         for col in ['B', 'AU', 'AW', 'BC']:
             sheet.column_dimensions[col].hidden = True
+
+        # hide QRS column if 995 was skipped
+        if CALC995 == "SKIPALL995"
+            for col in ['Q', 'R', 'S']:
+                sheet.column_dimensions[col].hidden = True
 
         # hide row 2. Row 1 is left for old header titles .
         for row in [1]:
@@ -628,7 +656,7 @@ def copyworksheet(source, destination, copyformatting=True):
         destination.column_dimensions[idx] = copy(rd)
 
 
-def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp):
+def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp, color=""):
     worksheet = workbook.create_sheet(title=sheettitle)  # create new sheet with region title
 
     newheaders = []
@@ -658,14 +686,31 @@ def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp):
             cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
 
+    # color tabs
+    if color != "" and type(color) == str:
+        if color.lower() == 'green':
+            worksheet.sheet_properties.tabColor = 'bdf1d8'
+        elif color.lower() == 'blue':
+            worksheet.sheet_properties.tabColor = 'bdd7ee'
+        elif color.lower() == 'red':
+            worksheet.sheet_properties.tabColor = 'fac2c2'
+        elif color.lower() == 'yellow':
+            worksheet.sheet_properties.tabColor = 'f5ff99'
+        elif color.lower() == 'purple':
+            worksheet.sheet_properties.tabColor = 'd3bcf2'
+        elif color.lower() == 'orange':
+            worksheet.sheet_properties.tabColor = 'f3d8bb'
+        else :
+            worksheet.sheet_properties.tabColor = color
+
     return worksheet
 
 
 class newWorksheet:
-    def __init__(self, title, code, workbook, mhtimestamp):
+    def __init__(self, title, code, workbook, mhtimestamp, color=""):
         self.title = title
         self.code = code
-        self.body = newsheetwithheaders(workbook, title, HEADERMAP, mhtimestamp)
+        self.body = newsheetwithheaders(workbook, title, HEADERMAP, mhtimestamp, color)
 
 
 def move_sheet(wb, from_loc=None, to_loc=None):
