@@ -7,10 +7,10 @@ code/JSRformatter.spec
 
 
 __pycache__
-input MH/*.xls*
-input new JSR/*.xls*
-input prev JSR/*.xls*
-output/*/*
+input MH/**.xls*
+input new JSR/**.xls*
+input prev JSR/**.xls*
+output/**/**
 venv/
 
 # Compiled source #

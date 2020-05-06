@@ -15,6 +15,7 @@ from headermap import HEADERMAP
 from macro import *
 
 DEBUG = False
+CALC995 = ""
 
 input_dir = "../input new jsr"
 input_dir2 = "../input prev jsr"
@@ -95,16 +96,16 @@ def main():
 
     # find right worksheet in previous
     if len(wbprev.sheetnames) > 1:
-        for possible_title in ["Original_All",
-                               "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
+        for possible_title in ["Original_All", "Sheet1"]:
+            # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
             if possible_title in wbprev.sheetnames:
                 if wbprev[possible_title]['A3'].value == "Contract Type" and wbprev[possible_title][
                     'B3'].value == "Business Unit Type":
                     # the powerBI JSR format has these values in headers
                     wsprev = wbprev[possible_title]
                     break  # once you find it stop searching
-    elif wbprev[wbprev.sheetnames[0]][
-        'A3'].value == "Contract Type":  # the correct format should have 'contract type' in the 3rd line first column
+    elif wbprev[wbprev.sheetnames[0]]['A3'].value == "Contract Type":
+        # the correct format should have 'contract type' in the 3rd line first column
         wsprev = wbprev[wbprev.sheetnames[0]]
     else:
         print("Unexpected workbook format, not sure which sheet to use for PREVIOUS MONTH")
@@ -112,59 +113,65 @@ def main():
         sys.exit()
 
     # locate and load manhours report
+    global CALC995
     inputMHreport = newest_file(input_dir3, "manhours report by allocation area")
-    wbmh = trytoloadworkbook(inputMHreport)
-
-    # find right worksheet in mh report
-    if len(wbmh.sheetnames) > 1:
-        for possible_title in ["manhours report by allocation a", "manhours report by allocation",
-                               "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
-            if possible_title in wbmh.sheetnames:
-                if wbmh[possible_title]['A1'].value == "ALLOCATION AREA" and wbmh[possible_title][
-                    'H1'].value == "SUBSIDIARY":  # If these headers are here, this is the right sheet
-                    wsmh = wbmh[possible_title]
-                    break  # once you find it stop searching
-    elif wbmh[wbmh.sheetnames[0]][
-        'A1'].value == "ALLOCATION AREA":  # the correct format should have 'contract type' in the 3rd line first column
-        wsmh = wbmh[wbmh.sheetnames[0]]
+    if not inputMHreport:
+        CALC995 = "SKIPALL995"
     else:
-        print("Could not find correct sheet in Manhours Report")
-        input("Press 'ENTER' to close")
-        sys.exit()
+        wbmh = trytoloadworkbook(inputMHreport)
+        # find right worksheet in mh report
+        if len(wbmh.sheetnames) > 1:
+            for possible_title in ["manhours report by allocation a", "manhours report by allocation", "Sheet1"]:
+                # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
+                if possible_title in wbmh.sheetnames:
+                    if wbmh[possible_title]['A1'].value == "ALLOCATION AREA" and wbmh[possible_title][
+                        'H1'].value == "SUBSIDIARY":  # If these headers are here, this is the right sheet
+                        wsmh = wbmh[possible_title]
+                        break  # once you find it stop searching
+        elif wbmh[wbmh.sheetnames[0]]['A1'].value == "ALLOCATION AREA":
+            # the correct format should have 'contract type' in the 3rd line first column
+            wsmh = wbmh[wbmh.sheetnames[0]]
+        else:
+            print("Could not find correct sheet in Manhours Report")
+            CALC995 = "SKIPALL995"
 
     # locate and load 995 key
     input995key = newest_file(input_dir3, "995 key")
-    wbkey = trytoloadworkbook(input995key)
-
-    # find right worksheet in key
-    if len(wbkey.sheetnames) > 1:
-        for possible_title in ["key", "KEY", "Key",
-                               "Sheet1"]:  # acceptable sheet titles for searching, in order of most preferred (at left) to least preferred (at right)
-            if possible_title in wbkey.sheetnames:
-                if wbkey[possible_title]['C1'].value == "Cost Cntr Home" and wbkey[possible_title][
-                    'G1'].value == "Total Rate":  # If these headers are here, this is the right sheet
-                    wskey = wbkey[possible_title]
-                    break  # once you find it stop searching
-    elif wbkey[wbkey.sheetnames[0]][
-        'G1'].value == "Total Rate":  # the correct format should have 'contract type' in the 3rd line first column
-        wskey = wbkey[wbkey.sheetnames[0]]
+    if not input995key:
+        CALC995 = "SKIPALL995"
     else:
-        print("Could not find correct sheet in 995 Key")
-        input("Press 'ENTER' to close")
-        sys.exit()
+        wbkey = trytoloadworkbook(input995key)
+        # find right worksheet in key
+        if len(wbkey.sheetnames) > 1:
+            for possible_title in ["995 Key", "995 key", "key", "KEY", "Key", "Sheet1"]:
+                # acceptable sheet titles for 995keys, most preferred (left) to least preferred (right)
+                if possible_title in wbkey.sheetnames:
+                    if wbkey[possible_title]['C1'].value == "Cost Cntr Home" and wbkey[possible_title]['G1'].value == "Total Rate":
+                        # If these headers are here, this is the right sheet
+                        wskey = wbkey[possible_title]
+                        break  # once you find it stop searching
+        elif wbkey[wbkey.sheetnames[0]][
+            'G1'].value == "Total Rate":  # the correct format should have 'contract type' in the 3rd line first column
+            wskey = wbkey[wbkey.sheetnames[0]]
+        else:
+            print("Could not find correct sheet in 995 Key")
+            CALC995 = "SKIPALL995"
 
     # Get timestamps from files to verify with user
     oldJSRtimestamp = get_timestamp_str(inputJSR2, wsprev)
-    wsprev[
-        'A2'].value = oldJSRtimestamp  # not this one because it would be putting the value in the file in "old JSR" isntead of the newly generated one.
-    mhreporttimestamp = inputMHreport[-12:-5]  # try to get "WE 0419" out of "..... WE 0419.xlsx"
-    keytimestamp = time.strftime('%Y-%m-%d', time.gmtime(os.path.getmtime(input995key)))
+    wsprev['A2'].value = oldJSRtimestamp
+    if CALC995 != "SKIPALL995":
+        mhreporttimestamp = inputMHreport[-12:-5]  # try to get "WE 0419" out of "..... WE 0419.xlsx"
+        keytimestamp = time.strftime('%Y-%m-%d', time.gmtime(os.path.getmtime(input995key)))
+    else:
+        mhreporttimestamp = ""
 
     print()
     print("      New JSR dated", newJSRtimestamp)
     print("     Prev JSR dated", oldJSRtimestamp)
-    print("    MH Report dated", mhreporttimestamp)
-    print("      995 Key dated", keytimestamp)
+    if CALC995 != "SKIPALL995":
+        print("    MH Report dated", mhreporttimestamp)
+        print("      995 Key dated", keytimestamp)
     print()
     print("If these files & dates look good, PRESS 'ENTER' TO START")
     start = input()
@@ -172,12 +179,13 @@ def main():
     global DEBUG
     if start.lower() == "debug":
         DEBUG = True
-        print(
-            "ACTIVATING DEBUG (FAST) MODE: 70% of rows are skipped. Alternate row highlighting is disabled to let script run faster.")
+        print("ACTIVATING DEBUG (FAST) MODE: 70% of rows are skipped.\n",
+              "Alternate row highlighting is disabled to let script run faster.")
 
     if DEBUG:
-        CALC995 = "NORMAL"
-    if not DEBUG:
+        if CALC995 != "SKIPALL995":
+            CALC995 = "NORMAL"
+    elif CALC995 != "SKIPALL995":
         print("How do you want to handle 995 calculations?\n"
               "  Type '1' for    : Do not perform any 995 calculations (Blank Col Q, R, S)\n"
               "  Type '2' for    : Skip Col Q calculations (During month end if 995 costs are already posted)\n"
@@ -190,6 +198,10 @@ def main():
             CALC995 = "SKIPCOLQ"
         else:
             CALC995 = "NORMAL"
+    else:
+        print("Manhours files weren't found so 995 calculations will be skipped (Blank Columns Q,R,S)\n"
+             "Press ENTER to continue.")
+        input()
 
     print("--------------------------------------------------------------------------")
     print()
@@ -302,20 +314,18 @@ def main():
 
     ###### here go calculations based on 995 using Key and MH Report.
 
-    print("Copying 995 Key")
     insertedkeyws = wb1.create_sheet(title="995 Key")  # create a blank worksheet in the JSR file
-    copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
-
-    print("Copying MH Report")
     insertedmhws = wb1.create_sheet(title="MH " + mhreporttimestamp)
-    copyworksheet(wsmh, insertedmhws, copyformatting=False)
-    for cell in insertedmhws[1]:  # formats with colors and wraptext
-        cell.fill = PatternFill(start_color='d9d9d9',
-                                fill_type="solid")  # start_color is background color, end_color is font color
-        cell.alignment = Alignment(horizontal='left', wrap_text=True)
-        cell.font = Font(bold=True)
 
     if CALC995 in ["SKIPCOLQ", "NORMAL"]:
+        print("Copying 995 Key and MH Report")
+        copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
+        copyworksheet(wsmh, insertedmhws, copyformatting=False)
+        for cell in insertedmhws[1]:  # formats with colors and wraptext
+            cell.fill = PatternFill(start_color='d9d9d9',
+                                    fill_type="solid")  # start_color is background color, end_color is font color
+            cell.alignment = Alignment(horizontal='left', wrap_text=True)
+            cell.font = Font(bold=True)
 
         # for each row in the main worksheet
         # get the job number
@@ -446,8 +456,8 @@ def main():
                             break
                         if x == insertedkeyws.max_row + 1:
                             print("failed to find any region code for job number ", jobnumber)
-    else:
-        print("Skipping 995 calculations.")
+        else:
+            print("Skipping 995 calculations.")
     ####### end of 995 calculations
 
     ############################################################################
@@ -795,30 +805,22 @@ def newest_file(path, keyword=""):
         input("Press 'ENTER' to quit")
         sys.exit()
 
-    # if a keyword is supplied, run it twice, once with keyword and once without.
-    while True:
-        tracksheets = []
-        for basename in files:
-            if basename.lower().find(keyword.lower()) != -1:
-                # print (basename)
-                # print (basename.replace('\\','/'))
-                tracksheets.append(basename)
+    # search for a keyword.
 
-        paths = [os.path.join(path, basename) for basename in tracksheets]
-        # print ("paths = ",paths)
-        if paths:  # if paths is not empty
-            return max(paths, key=os.path.getctime).replace('\\', '/')
-        elif keyword is "":
-            print("I couldn't find the JSR file to load at ", path)
-            input("script will cancel, press enter to close and insert JSR file")
-            sys.exit()
-        else:
-            keyword = ""
-        #       print ("Couldn't find file with JSR, searching now for any file")
+    tracksheets = []
+    for basename in files:
+        if basename.lower().find(keyword.lower()) != -1:
+            # print (basename)
+            # print (basename.replace('\\','/'))
+            tracksheets.append(basename)
 
-    input("Something went wrong trying to find the JSR files. Press enter and this script will stop.")
-    sys.exit()
-
+    paths = [os.path.join(path, basename) for basename in tracksheets]
+    # print ("paths = ",paths)
+    if paths:  # if paths is not empty
+        return max(paths, key=os.path.getctime).replace('\\', '/')
+    else:
+        print("Failed to load file at ", path)
+        return False
 
 def parse_for_date(searchterm, key):
     return searchterm[searchterm.find(key) + len(key):]

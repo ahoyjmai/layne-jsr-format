@@ -7,4 +7,3 @@ cmd
 cd directory from explorer bar ie 
 	C:\Users\Jonathan.Mai\PycharmProjects\layne-jsr-format2\code
 pyinstaller JSRformatter.py --onefile
-
