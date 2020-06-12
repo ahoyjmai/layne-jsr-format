@@ -41,7 +41,7 @@ equations are hard-coded in HEADERMAP
 
 version Notes
 v1.7
- fixed 995 calcs, user has option to skip 995 calcs or col Q. Changed regions to Central/NE/SE/Central, eliminated SW
+ fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
 
 v1.6
  First version allowing 995 calcs. requires two new input files to put into a folder from adam. a YTD MH report
@@ -188,18 +188,18 @@ def main():
     elif CALC995 != "SKIPALL995":
         print("How do you want to handle 995 calculations?\n"
               "  Type '1' for    : Do not perform any 995 calculations (Blank Col Q, R, S)\n"
-              "  Type '2' for    : Skip Col Q calculations (During month end if 995 costs are already posted)\n"
+              "  Type '2' for    : Skip Col R calculations (During month end if 995 costs are already posted)\n"
               "  Type nothing    : Perform all 995 calculations normally\n"
               "Make a selection and press ENTER.")
         CALC995 = input()
         if '1' in CALC995:
             CALC995 = "SKIPALL995"
         elif '2' in CALC995:
-            CALC995 = "SKIPCOLQ"
+            CALC995 = "SKIPCOLR"
         else:
             CALC995 = "NORMAL"
     else:
-        print("Manhours files weren't found so 995 calculations will be skipped (Blank Columns Q,R,S)\n"
+        print("Manhours files weren't found so 995 calculations will be skipped (Blank Columns Q,R,S,T,U)\n"
              "Press ENTER to continue.")
         input()
 
@@ -317,7 +317,7 @@ def main():
     insertedkeyws = wb1.create_sheet(title="995 Key")  # create a blank worksheet in the JSR file
     insertedmhws = wb1.create_sheet(title="MH " + mhreporttimestamp)
 
-    if CALC995 in ["SKIPCOLQ", "NORMAL"]:
+    if CALC995 in ["SKIPCOLR", "NORMAL"]:
         print("Copying 995 Key and MH Report")
         copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
         copyworksheet(wsmh, insertedmhws, copyformatting=False)
@@ -339,6 +339,10 @@ def main():
         ws2_accrual_col = get_col_from_header_name(ws2, "Est Accruals for 995 and T&D")
         ws2_mocost995_col = get_col_from_header_name(ws2, "Monthly Cost w/ current 995 and T&D")
         ws2_actmocost_col = get_col_from_header_name(ws2, "Actual Monthly Cost")
+        ws2_acttotcost_col = get_col_from_header_name(ws2, "Actual Total Cost")
+        ws2_actcostw995_col = get_col_from_header_name(ws2, "Actual Total Cost incl 995")
+        ws2_actmargw995_col = get_col_from_header_name(ws2, "Actual Total Margin incl 995")
+        ws2_billings_col = get_col_from_header_name(ws2, "Billings")
 
         wsmh_busunit_col = get_col_from_header_name(insertedmhws, "COMPANY", 1)
         wsmh_YTDMH_col = get_col_from_header_name(insertedmhws, "CUMULATIVE", 1, exact=False)
@@ -392,6 +396,7 @@ def main():
                         areasupervision = item[1]
                         break
                 # calculate column R
+                manhourint = 0
                 for i in range(1, insertedmhws.max_row + 1):
 
                     # this if-else finds and enters the manhours
@@ -400,8 +405,9 @@ def main():
                         mhreport_allocation = insertedmhws.cell(row=i, column=wsmh_allocation_col).value
                         if mhreport_allocation == "Total " + areasupervision:
                             manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
-                            manhours = manhourcell.value
-                            ws2.cell(row=j, column=ws2_YTDMH_col).value = manhours
+                            manhourint = manhourint + manhourcell.value
+                            ws2.cell(row=j, column=ws2_YTDMH_col).value = manhourint
+                            manhours = True
                             break
                     else:
                         # find manhours as normal job number.
@@ -420,42 +426,65 @@ def main():
                     ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="808080")
                     ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
                     ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="808080")
-                elif manhours:
-                    # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
-                    for x in range(1, insertedkeyws.max_row + 1):
-                        key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
-                        if key_costcenter == ws2costcenter:
-                            rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
-                            rateTND = insertedkeyws.cell(row=x, column=wskey_TNDrate_col)
+                    ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
+                    ws2.cell(row=j, column=ws2_actcostw995_col).font = Font(color="808080")
+                    ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
+                    ws2.cell(row=j, column=ws2_actmargw995_col).font = Font(color="808080")
+                else:
 
-                            # Column S calculation
-                            if areasupervision:
-                                accrual_formula = "=-'" + insertedmhws.title + "'!" + manhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
+                    temp_rate995 = "NOT SET"
+                    if manhours:
+                        # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
+                        for x in range(1, insertedkeyws.max_row + 1):
+                            key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
+                            if key_costcenter == ws2costcenter:
+                                rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
+                                rateTND = insertedkeyws.cell(row=x, column=wskey_TNDrate_col)
 
-                                # areasupervision 995 numbers should be negative
-                            else:
-                                accrual_formula = "='" + insertedmhws.title + "'!" + manhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
-
-                            ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
-
-                            # this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
-                            if CALC995 == "NORMAL":
-                                # perform column q calculations
+                                # Column S calculation
                                 try:
                                     if areasupervision:
-                                        # negative numbers for areasupervision codes
-                                        temp_rate995 = rate995.value  # do not include TND for areasupervision
-                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,
-                                                                                                   column=ws2_actmocost_col).value - temp_rate995 * manhours
+                                        temp_rate995 = -rate995.value  # do not include TND for areasupervision # negative numbers for areasupervision codes
+                                        accrual_formula = "=-'" + insertedmhws.title + "'!" + manhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
+                                        # areasupervision 995 numbers should be negative
                                     else:
                                         temp_rate995 = rate995.value + rateTND.value
-                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,
-                                                                                                   column=ws2_actmocost_col).value + temp_rate995 * manhours
+                                        accrual_formula = "='" + insertedmhws.title + "'!" + manhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
                                 except:
-                                    ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
-                            break
-                        if x == insertedkeyws.max_row + 1:
-                            print("failed to find any region code for job number ", jobnumber)
+                                    accrual_formula = "ERROR"
+                                # Set 995 cost
+                                ws2.cell(row=j, column=ws2_accrual_col).value = accrual_formula
+
+                                # this is not a long term equation because sheets are not very friendly with relative equations especially in sortable/filterable tables
+                                if CALC995 == "NORMAL":
+                                    # perform column q calculations
+                                    if temp_rate995 == "NOT SET":
+                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
+                                    else:
+                                        ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,column=ws2_actmocost_col).value + temp_rate995 * manhours
+
+                                # calculate actual total cost
+                                if temp_rate995 != "NOT SET":
+                                    # Set total cost w 995
+                                    actualtotcostw995 = temp_rate995 * manhours + ws2.cell(row=j,column=ws2_acttotcost_col).value
+                                    ws2.cell(row=j, column=ws2_actcostw995_col).value = actualtotcostw995
+
+                                    # Set total marg w 995
+                                    if ws2.cell(row=j, column=ws2_billings_col).value == 0:
+                                        actualtotmarginw995 = 0
+                                    else:
+                                        actualtotmarginw995 = 1 - actualtotcostw995 / ws2.cell(row=j,column=ws2_billings_col).value
+                                    ws2.cell(row=j, column=ws2_actmargw995_col).value = actualtotmarginw995
+
+                                break
+
+                            if x == insertedkeyws.max_row + 1:
+                                print("failed to find any region code for job number ", jobnumber)
+
+                    else:   # no manhours were found. no accrual, no manhour
+                        ws2.cell(row=j, column=ws2_YTDMH_col).value = 0
+                        ws2.cell(row=j, column=ws2_accrual_col).value = 0
+
         else:
             print("Skipping 995 calculations.")
     ####### end of 995 calculations
@@ -550,12 +579,12 @@ def main():
             highlight_alternate_rows(sheet)  # option to skip this during debug mode
 
         # print("Hiding TBD columns")
-        for col in ['B', 'AU', 'AW', 'BC']:
+        for col in ['B', 'AW', 'AY', 'BE']:
             sheet.column_dimensions[col].hidden = True
 
         # hide QRS column if 995 was skipped
         if CALC995 == "SKIPALL995":
-            for col in ['Q', 'R', 'S']:
+            for col in ['Q', 'R', 'S', 'T', 'U']:
                 sheet.column_dimensions[col].hidden = True
 
         # hide row 2. Row 1 is left for old header titles .
@@ -566,9 +595,9 @@ def main():
         sheet.freeze_panes = sheet['A4']
 
         # print("Adjusting Column Widths")
-        for i in range(46, 57):
+        for i in range(48, 59):
             sheet.column_dimensions[get_column_letter(i)].width = 15
-        for i in list(range(6, 34)) + list(range(36, 46)) + list(range(50, 53)):
+        for i in list(range(6, 36)) + list(range(38, 48)) + list(range(52, 55)):
             sheet.column_dimensions[get_column_letter(i)].width = 12
         sheet.column_dimensions['E'].width = 35
 
@@ -705,7 +734,7 @@ def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp, color=""):
                                 fill_type="solid")  # start_color is background color, end_color is font color
         cell.alignment = Alignment(wrap_text=True)
         cell.font = Font(color="FFFFFF", bold=True)
-        if get_column_letter(cell.col_idx) in ['Q', 'R', 'S']:
+        if get_column_letter(cell.col_idx) in ['Q', 'R', 'S', 'T', 'U']:
             cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
     # color tabs
@@ -772,7 +801,7 @@ def highlight_alternate_rows(worksheet):
             if cell.col_idx > 60:
                 break  # don't go past column 60, wasteful.
 
-            if get_column_letter(cell.col_idx) in ['Q', 'R', 'S']:  # special highlighting for 995 columns
+            if get_column_letter(cell.col_idx) in ['Q', 'R', 'S', 'T', 'U']:  # special highlighting for 995 columns
                 cell.fill = gray_fillstyle
                 cell.border = gray_borderstyle
             elif i % 2 == 1:  # highlight cells on odd rows

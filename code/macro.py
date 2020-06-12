@@ -47,14 +47,15 @@ def move_down_right(down=0, right=3):
                 pyautogui.press('down')
         
 def add_subtotals():
-        shouldcheck=[0,0,0,0,0,1,
-                     1,1,1,1,1,1,
-                     1,1,1,1,1,1,
-                     1,1,0,1,0,0,
-                     1,1,1,1,1,1,
-                     1,1,1,1,0,1,
-                     1,1,1,1,1,1,
-                     1,1,1]
+        #            A B C D E F
+        shouldcheck=[0,0,0,0,0,1,       #A
+                     1,1,1,1,1,1,       #G
+                     1,1,1,1,1,1,       #M
+                     1,1,1,1,0,1,0,0,       #S
+                     1,1,1,1,1,1,       #AZ
+                     1,1,1,1,0,1,       #AG
+                     1,1,1,1,1,1,       #AM
+                     1,1,1]             #AS
         # enter subtotal menu
         pyautogui.PAUSE=slowspeed
         pyautogui.keyDown('alt')
