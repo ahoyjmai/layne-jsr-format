@@ -40,6 +40,10 @@ unexpected additions to input spreadsheets will cause this script to malfunction
 equations are hard-coded in HEADERMAP
 
 version Notes
+v1.8
+ Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
+ MH report, now it sums multiple area region codes if present.
+
 v1.7
  fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
 
@@ -187,7 +191,7 @@ def main():
             CALC995 = "NORMAL"
     elif CALC995 != "SKIPALL995":
         print("How do you want to handle 995 calculations?\n"
-              "  Type '1' for    : Do not perform any 995 calculations (Blank Col Q, R, S)\n"
+              "  Type '1' for    : Do not perform any 995 calculations (Blank Col R, S, T, U, V)\n"
               "  Type '2' for    : Skip Col R calculations (During month end if 995 costs are already posted)\n"
               "  Type nothing    : Perform all 995 calculations normally\n"
               "Make a selection and press ENTER.")
@@ -195,11 +199,11 @@ def main():
         if '1' in CALC995:
             CALC995 = "SKIPALL995"
         elif '2' in CALC995:
-            CALC995 = "SKIPCOLR"
+            CALC995 = "SKIP995MONTH"
         else:
             CALC995 = "NORMAL"
     else:
-        print("Manhours files weren't found so 995 calculations will be skipped (Blank Columns Q,R,S,T,U)\n"
+        print("Manhours files weren't found so 995 calculations will be skipped (Blank Columns R,S,T,U,V)\n"
              "Press ENTER to continue.")
         input()
 
@@ -317,12 +321,12 @@ def main():
     insertedkeyws = wb1.create_sheet(title="995 Key")  # create a blank worksheet in the JSR file
     insertedmhws = wb1.create_sheet(title="MH " + mhreporttimestamp)
 
-    if CALC995 in ["SKIPCOLR", "NORMAL"]:
+    if CALC995 in ["SKIP995MONTH", "NORMAL"]:
         print("Copying 995 Key and MH Report")
         copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
         copyworksheet(wsmh, insertedmhws, copyformatting=False)
         for cell in insertedmhws[1]:  # formats with colors and wraptext
-            cell.fill = PatternFill(start_color='d9d9d9',
+            cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
             cell.alignment = Alignment(horizontal='left', wrap_text=True)
             cell.font = Font(bold=True)
@@ -337,12 +341,12 @@ def main():
         ws2_jobnum_col = get_col_from_header_name(ws2, "Job #")
         ws2_YTDMH_col = get_col_from_header_name(ws2, "YTD Hourly Manhours", 3, exact=False)
         ws2_accrual_col = get_col_from_header_name(ws2, "Est Accruals for 995 and T&D")
-        ws2_mocost995_col = get_col_from_header_name(ws2, "Monthly Cost w/ current 995 and T&D")
         ws2_actmocost_col = get_col_from_header_name(ws2, "Actual Monthly Cost")
         ws2_acttotcost_col = get_col_from_header_name(ws2, "Actual Total Cost")
-        ws2_actcostw995_col = get_col_from_header_name(ws2, "Actual Total Cost incl 995")
-        ws2_actmargw995_col = get_col_from_header_name(ws2, "Actual Total Margin incl 995")
-        ws2_billings_col = get_col_from_header_name(ws2, "Billings")
+        ws2_mocost995_col = get_col_from_header_name(ws2, "Act Monthly Cost w 995 & T&D")
+        ws2_actcostw995_col = get_col_from_header_name(ws2, "Act Total Cost w 995 & T&D")
+        ws2_actmargw995_col = get_col_from_header_name(ws2, "Act Total Margin w 995 & T&D")
+        ws2_billings_col = get_col_from_header_name(ws2, "Total Billings")
 
         wsmh_busunit_col = get_col_from_header_name(insertedmhws, "COMPANY", 1)
         wsmh_YTDMH_col = get_col_from_header_name(insertedmhws, "CUMULATIVE", 1, exact=False)
@@ -408,7 +412,7 @@ def main():
                             manhourint = manhourint + manhourcell.value
                             ws2.cell(row=j, column=ws2_YTDMH_col).value = manhourint
                             manhours = True
-                            break
+
                     else:
                         # find manhours as normal job number.
                         mhreport_jobnumber = insertedmhws.cell(row=i, column=wsmh_busunit_col).value
@@ -462,6 +466,9 @@ def main():
                                         ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
                                     else:
                                         ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,column=ws2_actmocost_col).value + temp_rate995 * manhours
+                                elif CALC995 == "SKIP995MONTH":
+                                    ws2.cell(row=j, column=ws2_mocost995_col).value = "'--'"
+                                    pass
 
                                 # calculate actual total cost
                                 if temp_rate995 != "NOT SET":
@@ -582,9 +589,9 @@ def main():
         for col in ['B', 'AW', 'AY', 'BE']:
             sheet.column_dimensions[col].hidden = True
 
-        # hide QRS column if 995 was skipped
+        # hide RSTUV column if 995 was skipped
         if CALC995 == "SKIPALL995":
-            for col in ['Q', 'R', 'S', 'T', 'U']:
+            for col in ['R', 'S', 'T', 'U', 'V']:
                 sheet.column_dimensions[col].hidden = True
 
         # hide row 2. Row 1 is left for old header titles .
@@ -596,8 +603,8 @@ def main():
 
         # print("Adjusting Column Widths")
         for i in range(48, 59):
-            sheet.column_dimensions[get_column_letter(i)].width = 15
-        for i in list(range(6, 36)) + list(range(38, 48)) + list(range(52, 55)):
+            sheet.column_dimensions[get_column_letter(i)].width = 16
+        for i in list(range(6, 47)) + list(range(53, 56)):
             sheet.column_dimensions[get_column_letter(i)].width = 12
         sheet.column_dimensions['E'].width = 35
 
@@ -734,7 +741,7 @@ def newsheetwithheaders(workbook, sheettitle, headermap, mhtimestamp, color=""):
                                 fill_type="solid")  # start_color is background color, end_color is font color
         cell.alignment = Alignment(wrap_text=True)
         cell.font = Font(color="FFFFFF", bold=True)
-        if get_column_letter(cell.col_idx) in ['Q', 'R', 'S', 'T', 'U']:
+        if get_column_letter(cell.col_idx) in ['R', 'S', 'T', 'U', 'V']:
             cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
     # color tabs
@@ -783,7 +790,7 @@ def highlight_alternate_rows(worksheet):
     blue_borderstyle = Border(top=Side(style='thin', color="9BC2E6"), bottom=Side(style='thin', color="9BC2E6"))
     blue_fillstyle = PatternFill(start_color='ddebf7', fill_type="solid")
     gray_borderstyle = Border(top=Side(style='thin', color="bfbfbf"), bottom=Side(style='thin', color="bfbfbf"))
-    gray_fillstyle = PatternFill(start_color='b4b4b4', fill_type="solid")
+    gray_fillstyle = PatternFill(start_color='d9d9d9', fill_type="solid")
 
     # for i in range (5,worksheet.max_row,2):    # skip first 3(or 4) lines
     # worksheet.row_dimensions[i].fill = blue_fillstyle
@@ -801,7 +808,7 @@ def highlight_alternate_rows(worksheet):
             if cell.col_idx > 60:
                 break  # don't go past column 60, wasteful.
 
-            if get_column_letter(cell.col_idx) in ['Q', 'R', 'S', 'T', 'U']:  # special highlighting for 995 columns
+            if get_column_letter(cell.col_idx) in ['R', 'S', 'T', 'U', 'V']:  # special highlighting for 995 columns
                 cell.fill = gray_fillstyle
                 cell.border = gray_borderstyle
             elif i % 2 == 1:  # highlight cells on odd rows
@@ -809,7 +816,10 @@ def highlight_alternate_rows(worksheet):
                     cell.fill = blue_fillstyle
                     cell.border = blue_borderstyle
 
-            if cell.value == 0 and cell.column != "Y":  # apply gray formatting to zeros, except in billing column Y
+
+            #ws2_billings_col = get_col_from_header_name(ws2, "Total Billings")
+            #if cell.value == 0 and cell.column != ws2_billings_col:  # apply gray formatting to zeros, except in billing column Y and MH col T
+            if cell.value == 0 and cell.column not in ['L']:  # apply gray formatting to zeros, except in billing column L
                 cell.font = Font(color="b2b2b2")
 
 
@@ -890,7 +900,7 @@ def mark_if_actual_cost_is_greater_than_forecasted_cost(row):
 
 def clean_sales_vs_billings_values(row):
     # AC and AD is billings vs sales, delete if negative
-    for a in ["AC", "AD"]:
+    for a in ["AE", "AF"]:
         b = row[xcol(a)].value
         if b is not None:  # make sure we don't compare "" with an integer.
             if b < 0:

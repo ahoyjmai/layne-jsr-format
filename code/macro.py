@@ -6,13 +6,19 @@ import time
 import sys
 
 regularspeed=0.03
-slowspeed=0.2
+slowspeed=0.25
 pyautogui.PAUSE=regularspeed    # standard delay in seconds, pyautogui automatically delays this long after each 
 
 def move_to_last_worksheet():
         pyautogui.keyDown('ctrl')
         for k in range(20):
                 pyautogui.press('pagedown')
+        pyautogui.keyUp('ctrl')
+
+def move_to_first_worksheet():
+        pyautogui.keyDown('ctrl')
+        for k in range(20):
+                pyautogui.press('pageup')
         pyautogui.keyUp('ctrl')
 
 def alt_tab():
@@ -24,6 +30,12 @@ def go_back_x_sheets(x=1):
         pyautogui.keyDown('ctrl')
         for k in range(x):
                 pyautogui.press('pageup')
+        pyautogui.keyUp('ctrl')
+
+def go_forward_x_sheets(x=1):
+        pyautogui.keyDown('ctrl')
+        for k in range(x):
+                pyautogui.press('pagedown')
         pyautogui.keyUp('ctrl')
 
 def ctrl_s_to_save():
@@ -47,15 +59,15 @@ def move_down_right(down=0, right=3):
                 pyautogui.press('down')
         
 def add_subtotals():
-        #            A B C D E F
-        shouldcheck=[0,0,0,0,0,1,       #A
-                     1,1,1,1,1,1,       #G
-                     1,1,1,1,1,1,       #M
-                     1,1,1,1,0,1,0,0,       #S
-                     1,1,1,1,1,1,       #AZ
-                     1,1,1,1,0,1,       #AG
-                     1,1,1,1,1,1,       #AM
-                     1,1,1]             #AS
+        #            A B C D E F G
+        shouldcheck=[0,0,0,0,0,1,1,   #A-G
+                     1,1,1,1,1,1,1,   #H-N
+                     1,1,1,0,0,0,0,   #O-U
+                     0,1,0,1,0,0,1,   #V-AB
+                     1,1,1,1,1,1,1,   #AC-AI
+                     1,0,1,1,1,1,1,   #AJ-AP
+                     1,1,1,1,1   ]    #AQ-AV
+
         # enter subtotal menu
         pyautogui.PAUSE=slowspeed
         pyautogui.keyDown('alt')
@@ -197,8 +209,8 @@ def focus_window(key="jsr"):
 
 def KEYBOARD_MACRO_START():
         time.sleep(1)
-        move_to_last_worksheet()
-        go_back_x_sheets(5)
+        move_to_first_worksheet()
+        #go_back_x_sheets(5)
         for k in range(5):      #do this 5 times for  sheets (All areas + 4 regional sheets)
                 j=k+1
                 sys.stdout.write("Starting sheet %s of 5... " % j)
@@ -209,12 +221,14 @@ def KEYBOARD_MACRO_START():
                 sys.stdout.write("Done \n")
                 sys.stdout.flush()
                 move_down_right(2,0)
-                go_back_x_sheets(1)
+                go_forward_x_sheets(1)
                 time.sleep(1)
-        time.sleep(3)
+        time.sleep(1)
+        move_to_first_worksheet()
+        time.sleep(2)
         ctrl_s_to_save()
         print("Finished, you can use the keyboard and mouse now!")
-        time.sleep(3)
+        time.sleep(1)
         alt_tab()
         
                 
