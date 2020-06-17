@@ -42,7 +42,7 @@ equations are hard-coded in HEADERMAP
 version Notes
 v1.8
  Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
- MH report, now it sums multiple area region codes if present.
+ MH report, now it sums multiple area region codes if present. 
 
 v1.7
  fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
@@ -71,8 +71,8 @@ Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 Written by Jonathan Mai on 8/7/2019
 """
-Last_Updated = "Last Updated 5/6/2020"
-Version_Number = "Version v1.7"
+Last_Updated = "Last Updated 6/17/2020"
+Version_Number = "Version v1.8"
 
 
 def main():
@@ -80,7 +80,8 @@ def main():
     # this doesn't actually do anything, all it does is be scary
     with open("readme.txt", 'r') as intro:  # print instructions
         print(intro.read())
-
+    print(Last_Updated)
+    print(Version_Number)
     print()
 
     ##### This section finds the filenames and directories for use####
