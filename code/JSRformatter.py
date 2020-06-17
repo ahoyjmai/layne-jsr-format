@@ -886,21 +886,24 @@ Pinkfillstyle = PatternFill(start_color='FFAFAF', fill_type="solid")
 
 
 def mark_if_actual_cost_is_greater_than_forecasted_cost(row):
-    # O is actual cost, M is Forecasted cost
-    if row[xcol("O")].value is not None and row[xcol("M")].value is not None:
-        ActualGreaterThanForecast = row[xcol("O")].value - row[xcol("M")].value
+    # Q is actual cost, N is Forecasted cost
+    ACTCOSTCOL="Q"
+    FORCOSTCOL="N"
+    if row[xcol(ACTCOSTCOL)].value is not None and row[xcol(FORCOSTCOL)].value is not None:
+        ActualGreaterThanForecast = row[xcol(ACTCOSTCOL)].value - row[xcol(FORCOSTCOL)].value
         if ActualGreaterThanForecast > 0:
-            row[xcol("O")].fill = Redfillstyle
+            row[xcol(ACTCOSTCOL)].fill = Redfillstyle
             commenttext = "Actual Cost greater than Forecast Cost"
-            row[xcol("O")].comment = Comment(commenttext, "JMai")
+            row[xcol(ACTCOSTCOL)].comment = Comment(commenttext, "JMai")
         return True
     else:
         return False
 
 
 def clean_sales_vs_billings_values(row):
-    # AC and AD is billings vs sales, delete if negative
-    for a in ["AE", "AF"]:
+    # AE and AF is billings vs sales, delete if negative
+    BVSCOL=["AE", "AF"]
+    for a in BVSCOL:
         b = row[xcol(a)].value
         if b is not None:  # make sure we don't compare "" with an integer.
             if b < 0:
@@ -909,19 +912,20 @@ def clean_sales_vs_billings_values(row):
 
 
 def mark_large_POC_receivables(row):
-    # Z is POC receivables
+    # AB is POC receivables
+    POCRECCOL="AB"
     POC_threshold = 20000  # ignore unless POC is over $20k
-    a = row[xcol("Z")].value
+    a = row[xcol(POCRECCOL)].value
     if a:
         if a > POC_threshold:
             commenttext = "POC Receivables above $20k"
-            row[xcol("Z")].comment = Comment(commenttext, "JMai")
-            row[xcol("Z")].fill = Redfillstyle
+            row[xcol(POCRECCOL)].comment = Comment(commenttext, "JMai")
+            row[xcol(POCRECCOL)].fill = Redfillstyle
             return True
         elif a < -POC_threshold:
             commenttext = "POC Receivables below -$20k"
-            row[xcol("Z")].comment = Comment(commenttext, "JMai")
-            row[xcol("Z")].fill = Redfillstyle
+            row[xcol(POCRECCOL)].comment = Comment(commenttext, "JMai")
+            row[xcol(POCRECCOL)].fill = Redfillstyle
             return True
     return False
 
@@ -932,22 +936,26 @@ def mark_billings_over_contract_value(row):
     # Level 2: mark if est sales < billings (This one is more important, highlight this one if you have to choose)
     threshold = 100
 
-    # Y is billings, F is contract Value, O is actual Total Cost
-    if row[xcol("Y")].value is not None and row[xcol("F")].value is not None:
-        if row[xcol("F")].value > 5:
+    # L is billings, F is contract Value, Q is actual Total Cost, A in contract Type
+    BILLCOL="L"
+    CONVALCOL="F"
+    TOTCOSTCOL="Q"
+    CONTRTYPECOL="A"
+    if row[xcol(BILLCOL)].value is not None and row[xcol(CONVALCOL)].value is not None:
+        if row[xcol(CONVALCOL)].value > 5:
             # ignore if contract value is tiny
-            if row[xcol("Y")].value > row[xcol("F")].value + threshold:
+            if row[xcol(BILLCOL)].value > row[xcol(CONVALCOL)].value + threshold:
                 commenttext = "Billings exceed Contract Value. Change order needed."
-                row[xcol("F")].comment = Comment(commenttext, "JMai")
-                row[xcol("F")].fill = Redfillstyle
+                row[xcol(CONVALCOL)].comment = Comment(commenttext, "JMai")
+                row[xcol(CONVALCOL)].fill = Redfillstyle
                 return True
-            elif row[xcol("O")].value * 1.22 > row[xcol("F")].value and row[xcol("O")].value > row[
-                xcol("F")].value + threshold:
+            elif row[xcol(TOTCOSTCOL)].value * 1.22 > row[xcol(CONVALCOL)].value and row[xcol(TOTCOSTCOL)].value > row[
+                xcol(CONVALCOL)].value + threshold:
                 # apply level 2 only if it is a CJ job
-                if row[xcol("A")].value == "CJ":
+                if row[xcol(CONTRTYPECOL)].value == "CJ":
                     commenttext = "Revenue accrual based on actual costs is lower than an 18% margin. Possible CO needed."
-                    row[xcol("F")].comment = Comment(commenttext, "JMai")
-                    row[xcol("F")].fill = Pinkfillstyle
+                    row[xcol(CONVALCOL)].comment = Comment(commenttext, "JMai")
+                    row[xcol(CONVALCOL)].fill = Pinkfillstyle
                     return True
     else:
         return False
@@ -958,25 +966,27 @@ def mark_actual_cost_over_billings_by_a_lot(row):
     # Level 1: mark if cost * 125% > billings
     # Level 2: mark if cost > billings + 15000 (This one is more important, highlight this one if you have to choose)
 
-    # Y is billings,       O is actual Total Cost
+    # L is billings,       Q is actual Total Cost
+    BILLCOSTCOL="L"
+    TOTCOSTCOL="Q"
     Cost_Threshold = 15000  # ignore unless cost is over billings by a lot, otherwise everything gets flagged
     Cost_Perc_Threshold = 1.25
 
-    if row[xcol("Y")].value is not None and row[xcol("O")].value is not None:
+    if row[xcol(BILLCOSTCOL)].value is not None and row[xcol(TOTCOSTCOL)].value is not None:
         # if zerotrigger: print("debug 1,", end="")
-        if row[xcol("O")].value > 3000:  # ignore if cost is tiny, less than 3000
+        if row[xcol(TOTCOSTCOL)].value > 3000:  # ignore if cost is tiny, less than 3000
             #       if zerotrigger: print("2", end="")
-            if row[xcol("O")].value > row[xcol("Y")].value + Cost_Threshold:
+            if row[xcol(TOTCOSTCOL)].value > row[xcol(BILLCOSTCOL)].value + Cost_Threshold:
                 #              if zerotrigger: print("3", end="")
                 commenttext = "Actual Cost exceeds Total Billings by over $15k"
-                row[xcol("Y")].comment = Comment(commenttext, "JMai")
-                row[xcol("Y")].fill = Redfillstyle
+                row[xcol(BILLCOSTCOL)].comment = Comment(commenttext, "JMai")
+                row[xcol(BILLCOSTCOL)].fill = Redfillstyle
                 return True
-            elif row[xcol("O")].value * Cost_Perc_Threshold > row[xcol("Y")].value:
+            elif row[xcol(TOTCOSTCOL)].value * Cost_Perc_Threshold > row[xcol(BILLCOSTCOL)].value:
                 #             if zerotrigger: print("4", end="")
                 commenttext = "Billings to Cost Ratio below 1.25"
-                row[xcol("Y")].comment = Comment(commenttext, "JMai")
-                row[xcol("Y")].fill = Pinkfillstyle
+                row[xcol(BILLCOSTCOL)].comment = Comment(commenttext, "JMai")
+                row[xcol(BILLCOSTCOL)].fill = Pinkfillstyle
                 return True
         #    if zerotrigger: print("5", end="")
     return False
