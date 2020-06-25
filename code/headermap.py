@@ -20,9 +20,9 @@ HEADERMAP=[
         ["Cost Delta Forecast vs Contract (New)"        ,"#,##0_);(#,##0)" ,"AN","T",   ""],
         ["Actual Monthly Cost"                          ,"#,##0_);(#,##0)" ,"U","",     ""],
         ["Actual Total Cost"                            ,"#,##0_);(#,##0)" ,"AB","",    ""],
-        ["Act Monthly Cost w 995 & T&D"              , "#,##0_);(#,##0)", "", "", ""],        # Orig All "U" + However JSR col S is calculated
-        ["Act Total Cost w 995 & T&D"                ,"#,##0_);(#,##0)" ,"","",      ""],  #
-        ["Act Total Margin w 995 & T&D"                 ,"0.0%_);(0.0%)"   ,"","",      ""],  #
+        ["Est Monthly Cost w 995 & T&D"                 , "#,##0_);(#,##0)", "", "", ""],        # Orig All "U" + However JSR col S is calculated
+        ["Est Total Cost w 995 & T&D"                   ,"#,##0_);(#,##0)" ,"","",      ""],  #
+        ["Current % Margin w Est 995 & T&D"             ,"0.0%_);(0.0%)"   ,"","",      ""],  #
         ["YTD Hourly Manhours"                          ,"#,##0_);(#,##0)" ,"","",      ""],    # would like date in col title  # Map to new file tab1 col J
         ["Est Accruals for 995 and T&D"                 ,"#,##0_);(#,##0)" ,"","",      ""],    # JSR Col R * New File tab2 Col G
         ["Est Margin (Forecasted)"                      ,"#,##0_);(#,##0)" ,"AX","",    ""],
