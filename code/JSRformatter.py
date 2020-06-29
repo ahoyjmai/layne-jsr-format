@@ -42,7 +42,7 @@ equations are hard-coded in HEADERMAP
 version Notes
 v1.8
  Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
- MH report, now it sums multiple area region codes if present. Fixed bugs regarding 995 calc w MH 
+ MH report, now it sums multiple area region codes if present. 995 MH are negative now. Fixed bugs regarding 995 calc w MH.
 
 v1.7
  fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
@@ -412,7 +412,7 @@ def main():
                             manhourcell = insertedmhws.cell(row=i, column=wsmh_YTDMH_col)
                             manhourint = manhourint + manhourcell.value
                             newmanhourcell = ws2.cell(row=j, column=ws2_YTDMH_col)
-                            newmanhourcell.value = manhourint
+                            newmanhourcell.value = -manhourint
                             manhours = True
 
                     else:
@@ -451,14 +451,16 @@ def main():
                                 # Est accruals calculation
                                 try:
                                     if areasupervision:
-                                        temp_rate995 = -rate995.value  # do not include TND for areasupervision # negative numbers for areasupervision codes
-                                        accrual_formula = "=-"+ newmanhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
-                                        # accrual_formula = "=-'" + insertedmhws.title + "'!" + newmanhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
-                                        # areasupervision 995 numbers should be negative
+                                        temp_rate995 = rate995.value  # do not include TND for areasupervision # negative numbers for areasupervision codes
+                                        accrual_formula = "=" + newmanhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
+                                        calculatedaccrual=temp_rate995 * newmanhourcell.value
+
                                     else:
                                         temp_rate995 = rate995.value + rateTND.value
                                         accrual_formula = "=" + newmanhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
-                                        # accrual_formula = "='" + insertedmhws.title + "'!" + newmanhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
+                                        calculatedaccrual = temp_rate995 * newmanhourcell.value
+
+
                                 except:
                                     accrual_formula = "ERROR"
                                 # Set 995 cost
@@ -466,32 +468,22 @@ def main():
 
                                 if CALC995 == "NORMAL":
                                     # perform est monthly cost w 995
-                                    if temp_rate995 == "NOT SET":
-                                        ws2.cell(row=j, column=ws2_mocost995_col).value = "ERROR"
-                                    else:
-                                        if areasupervision:
-                                            ws2.cell(row=j, column=ws2_mocost995_col).value = -(ws2.cell(row=j,column=ws2_actmocost_col).value + temp_rate995 * newmanhourcell.value)
-                                        else:
-                                            ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,column=ws2_actmocost_col).value + temp_rate995 * newmanhourcell.value
+                                    ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,column=ws2_actmocost_col).value + calculatedaccrual
                                 elif CALC995 == "SKIP995MONTH":
                                     ws2.cell(row=j, column=ws2_mocost995_col).value = "'--'"
                                     pass
 
                                 # calculate est total cost w 995
-                                if temp_rate995 != "NOT SET":
-                                    # Set total cost w 995
-                                    if areasupervision:
-                                        ws2.cell(row=j, column=ws2_actcostw995_col).value = -temp_rate995 * newmanhourcell.value
-                                    else:
-                                        actualtotcostw995 = temp_rate995 * newmanhourcell.value + ws2.cell(row=j,column=ws2_acttotcost_col).value
-                                        ws2.cell(row=j, column=ws2_actcostw995_col).value = actualtotcostw995
+                                actualtotcostw995 = calculatedaccrual + ws2.cell(row=j,column=ws2_acttotcost_col).value
+                                ws2.cell(row=j, column=ws2_actcostw995_col).value = actualtotcostw995
 
-                                        # Set total marg w 995
-                                        if ws2.cell(row=j, column=ws2_billings_col).value == 0:
-                                            actualtotmarginw995 = 0
-                                        else:
-                                            actualtotmarginw995 = 1 - actualtotcostw995 / ws2.cell(row=j,column=ws2_billings_col).value
-                                        ws2.cell(row=j, column=ws2_actmargw995_col).value = actualtotmarginw995
+                                if not areasupervision:
+                                    # Set total marg w 995
+                                    if ws2.cell(row=j, column=ws2_billings_col).value == 0:
+                                        actualtotmarginw995 = 0
+                                    else:
+                                        actualtotmarginw995 = 1 - actualtotcostw995 / ws2.cell(row=j,column=ws2_billings_col).value
+                                    ws2.cell(row=j, column=ws2_actmargw995_col).value = actualtotmarginw995
 
                                 break
 
