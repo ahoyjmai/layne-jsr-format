@@ -71,8 +71,8 @@ Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 Written by Jonathan Mai on 8/7/2019
 """
-Last_Updated = "Last Updated 6/25/2020"
-Version_Number = "Version v1.8"
+Last_Updated = "Last Updated 6/29/2020"
+Version_Number = "Version v1.8a"
 
 
 def main():
@@ -326,6 +326,10 @@ def main():
         print("Copying 995 Key and MH Report")
         copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
         copyworksheet(wsmh, insertedmhws, copyformatting=False)
+        # add MH subtotal column in insertedmhws, this is needed for a static MH location so formulas don't break
+        insertedkeyws.insert_cols(5)
+        insertedkeyws.cell(row=1, column=5).value = "MH Subtotal"
+
         for cell in insertedmhws[1]:  # formats with colors and wraptext
             cell.fill = PatternFill(start_color='808080',
                                     fill_type="solid")  # start_color is background color, end_color is font color
@@ -356,6 +360,7 @@ def main():
         wskey_costcenter_col = get_col_from_header_name(insertedkeyws, "Cost Cntr Home", 1)
         wskey_995rate_col = get_col_from_header_name(insertedkeyws, "995 Submitted", 1, exact=False)
         wskey_TNDrate_col = get_col_from_header_name(insertedkeyws, "T&D Rate", 1)
+        wskey_MHsubtotal_col = get_col_from_header_name(insertedkeyws, "MH Subtotal", 1)
 
         list_of_995_numbers = [
             ["6008995", "250"],
@@ -396,6 +401,9 @@ def main():
                 manhours = False  # Identifies if this has any MH in it, put # manhours into this
                 areasupervision = False  # Identifies if this is 995 number, allocation area code into this
 
+                ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value
+                # this is the cost center for the current job number ie " REDLANDS - WA"
+
                 for item in list_of_995_numbers:
                     if item[0] == jobnumber:
                         areasupervision = item[1]
@@ -425,8 +433,16 @@ def main():
                             newmanhourcell.value = manhours
                             break
 
-                ws2costcenter = ws2.cell(row=j, column=ws2_costcenter_col).value
-                # this is the cost center for the current job number ie " REDLANDS - WA"
+                if areasupervision and manhours:
+                    # write manhours into 995k sheet for static reference in formula
+                    for x in range(1, insertedkeyws.max_row + 1):
+                        key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
+                        if key_costcenter == ws2costcenter:
+                            #print("key_costcenter=", key_costcenter," -manhourint=", -manhourint)
+                            #print("wskey_MHsubtotal_col",wskey_MHsubtotal_col)
+                            #print("cellvalue",insertedkeyws.cell(row=x, column=wskey_MHsubtotal_col).value)
+                            insertedkeyws.cell(row=x, column=wskey_MHsubtotal_col).value = -manhourint
+
 
                 if "WATER TREATMENT" in ws2costcenter:
                     ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
@@ -447,18 +463,21 @@ def main():
                             if key_costcenter == ws2costcenter:
                                 rate995 = insertedkeyws.cell(row=x, column=wskey_995rate_col)
                                 rateTND = insertedkeyws.cell(row=x, column=wskey_TNDrate_col)
+                                mhsubtotal =insertedkeyws.cell(row=x, column=wskey_MHsubtotal_col)
 
                                 # Est accruals calculation
                                 try:
                                     if areasupervision:
                                         temp_rate995 = rate995.value  # do not include TND for areasupervision # negative numbers for areasupervision codes
-                                        accrual_formula = "=" + newmanhourcell.coordinate + "*'995 Key'!" + rate995.coordinate
-                                        calculatedaccrual=temp_rate995 * newmanhourcell.value
+                                        accrual_formula = "='" + insertedkeyws.title + "'!" + mhsubtotal.coordinate + "*'" + insertedkeyws.title + "'!" + rate995.coordinate
+                                        calculatedaccrual = temp_rate995 * mhsubtotal.value
 
                                     else:
                                         temp_rate995 = rate995.value + rateTND.value
-                                        accrual_formula = "=" + newmanhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
-                                        calculatedaccrual = temp_rate995 * newmanhourcell.value
+                                        accrual_formula = "='" + insertedmhws.title + "'!" + manhourcell.coordinate + "*('" + insertedkeyws.title + "'!" + rate995.coordinate + "+ '"+ insertedkeyws.title + "'!" + rateTND.coordinate + ")"
+                                        #accrual_formula = "='" + insertedmhws.title + "'!" + manhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
+
+                                        calculatedaccrual = temp_rate995 * manhourcell.value
 
 
                                 except:
@@ -1004,11 +1023,17 @@ def get_col_from_header_name(ws, headername, header_row=3, exact=True):
     # exact true means a hard match.
     # exact false means it can contain the search string
     for cell in ws[header_row]:
+
+        try:
+            value = cell.value.lower()
+        except:
+            value = cell.value
+
         if exact:
-            if headername.lower() == cell.value.lower():
+            if headername.lower() == value:
                 return cell.col_idx
         else:
-            if headername.lower() in cell.value.lower():
+            if headername.lower() in value:
                 return cell.col_idx
 
 
