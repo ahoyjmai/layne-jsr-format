@@ -40,9 +40,11 @@ unexpected additions to input spreadsheets will cause this script to malfunction
 equations are hard-coded in HEADERMAP
 
 version Notes
-v1.8
+v1.8b
  Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
- MH report, now it sums multiple area region codes if present. 995 MH are negative now. Fixed bugs regarding 995 calc w MH.
+ MH report, now it sums multiple area region codes if present. 995 MH are negative now. Fixed bugs regarding 995 calc
+ w MH. In alternate 995 calculation (for month end) only manhours and est accruals are calculated. N/A is assigned to
+ estimated month, estimated total, and estimated margin
 
 v1.7
  fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
@@ -71,8 +73,8 @@ Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 Written by Jonathan Mai on 8/7/2019
 """
-Last_Updated = "Last Updated 6/29/2020"
-Version_Number = "Version v1.8a"
+Last_Updated = "Last Updated 7/6/2020"
+Version_Number = "Version v1.8b"
 
 
 def main():
@@ -193,7 +195,7 @@ def main():
     elif CALC995 != "SKIPALL995":
         print("How do you want to handle 995 calculations?\n"
               "  Type '1' for    : Do not perform any 995 calculations (Blank Col R, S, T, U, V)\n"
-              "  Type '2' for    : Skip Col R calculations (During month end if 995 costs are already posted)\n"
+              "  Type '2' for    : Only do manhours (U) & estimated accrual (V). For month end when 995 costs are already posted.\n"
               "  Type nothing    : Perform all 995 calculations normally\n"
               "Make a selection and press ENTER.")
         CALC995 = input()
@@ -322,7 +324,10 @@ def main():
     insertedkeyws = wb1.create_sheet(title="995 Key")  # create a blank worksheet in the JSR file
     insertedmhws = wb1.create_sheet(title="MH " + mhreporttimestamp)
 
-    if CALC995 in ["SKIP995MONTH", "NORMAL"]:
+    if CALC995 == "SKIPALL995":
+        print("Skipping 995 calculations.")
+        pass
+    elif CALC995 in ["SKIP995MONTH", "NORMAL"]:
         print("Copying 995 Key and MH Report")
         copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
         copyworksheet(wsmh, insertedmhws, copyformatting=False)
@@ -331,8 +336,8 @@ def main():
         insertedkeyws.cell(row=1, column=5).value = "MH Subtotal"
 
         for cell in insertedmhws[1]:  # formats with colors and wraptext
-            cell.fill = PatternFill(start_color='808080',
-                                    fill_type="solid")  # start_color is background color, end_color is font color
+            # start_color is background color, end_color is font color
+            cell.fill = PatternFill(start_color='808080',fill_type="solid")
             cell.alignment = Alignment(horizontal='left', wrap_text=True)
             cell.font = Font(bold=True)
 
@@ -446,17 +451,26 @@ def main():
 
                 if "WATER TREATMENT" in ws2costcenter:
                     ws2.cell(row=j, column=ws2_accrual_col).value = "N/A"
-                    ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="808080")
                     ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
+                    ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
+                    ws2.cell(row=j, column=ws2_actmargw995_col).value = "N/A"
+                    ws2.cell(row=j, column=ws2_accrual_col).font = Font(color="808080")
                     ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="808080")
-                    ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
                     ws2.cell(row=j, column=ws2_actcostw995_col).font = Font(color="808080")
-                    ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
                     ws2.cell(row=j, column=ws2_actmargw995_col).font = Font(color="808080")
                 else:
 
                     temp_rate995 = "NOT SET"    #This is the T&D + 995 rate to be used for this job number. this can vary
-                    if manhours:
+
+                    if CALC995 == "SKIP995MONTH":
+                        ws2.cell(row=j, column=ws2_mocost995_col).value = "N/A"
+                        ws2.cell(row=j, column=ws2_actcostw995_col).value = "N/A"
+                        ws2.cell(row=j, column=ws2_actmargw995_col).value = "N/A"
+                        ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="808080")
+                        ws2.cell(row=j, column=ws2_actcostw995_col).font = Font(color="808080")
+                        ws2.cell(row=j, column=ws2_actmargw995_col).font = Font(color="808080")
+
+                    elif CALC995 == "NORMAL" and manhours:
                         # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
                         for x in range(1, insertedkeyws.max_row + 1):
                             key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
@@ -488,21 +502,18 @@ def main():
                                 if CALC995 == "NORMAL":
                                     # perform est monthly cost w 995
                                     ws2.cell(row=j, column=ws2_mocost995_col).value = ws2.cell(row=j,column=ws2_actmocost_col).value + calculatedaccrual
-                                elif CALC995 == "SKIP995MONTH":
-                                    ws2.cell(row=j, column=ws2_mocost995_col).value = "'--'"
-                                    pass
 
-                                # calculate est total cost w 995
-                                actualtotcostw995 = calculatedaccrual + ws2.cell(row=j,column=ws2_acttotcost_col).value
-                                ws2.cell(row=j, column=ws2_actcostw995_col).value = actualtotcostw995
+                                    # calculate est total cost w 995
+                                    actualtotcostw995 = calculatedaccrual + ws2.cell(row=j,column=ws2_acttotcost_col).value
+                                    ws2.cell(row=j, column=ws2_actcostw995_col).value = actualtotcostw995
 
-                                if not areasupervision:
-                                    # Set total marg w 995
-                                    if ws2.cell(row=j, column=ws2_billings_col).value == 0:
-                                        actualtotmarginw995 = 0
-                                    else:
-                                        actualtotmarginw995 = 1 - actualtotcostw995 / ws2.cell(row=j,column=ws2_billings_col).value
-                                    ws2.cell(row=j, column=ws2_actmargw995_col).value = actualtotmarginw995
+                                    if not areasupervision:
+                                        # Set total marg w 995
+                                        if ws2.cell(row=j, column=ws2_billings_col).value == 0:
+                                            actualtotmarginw995 = 0
+                                        else:
+                                            actualtotmarginw995 = 1 - actualtotcostw995 / ws2.cell(row=j,column=ws2_billings_col).value
+                                        ws2.cell(row=j, column=ws2_actmargw995_col).value = actualtotmarginw995
 
                                 break
 
@@ -512,9 +523,8 @@ def main():
                     else:   # no manhours were found. no accrual, no manhour
                         ws2.cell(row=j, column=ws2_YTDMH_col).value = 0
                         ws2.cell(row=j, column=ws2_accrual_col).value = 0
+                        ws2.cell(row=j, column=ws2_actmargw995_col).value = 0
 
-        else:
-            print("Skipping 995 calculations.")
     ####### end of 995 calculations
 
     ############################################################################
