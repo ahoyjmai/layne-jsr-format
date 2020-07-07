@@ -326,6 +326,8 @@ def main():
 
     if CALC995 == "SKIPALL995":
         print("Skipping 995 calculations.")
+        commenttext = "Skipped all 995 calculations, JSR ran in mode 1"
+        ws2.cell(row=3, column=2).comment = Comment(commenttext, "JMai")
         pass
     elif CALC995 in ["SKIP995MONTH", "NORMAL"]:
         print("Copying 995 Key and MH Report")
@@ -397,6 +399,12 @@ def main():
             ["6402995", "275"],
             ["6403995", "276"], ]
 
+        if CALC995 == "SKIP995MONTH":
+            commenttext = "Skipped partial 995 calculations, JSR ran in mode 2"
+            ws2.cell(row=3, column=ws2_mocost995_col).comment = Comment(commenttext, "JMai")
+            ws2.cell(row=3, column=ws2_actcostw995_col).comment = Comment(commenttext, "JMai")
+            ws2.cell(row=3, column=ws2_actmargw995_col).comment = Comment(commenttext, "JMai")
+
         for j in range(4, ws2.max_row):
             if j % 500 == 0:
                 print("... on row", j, "of", ws2.max_row)  # progress bar
@@ -458,6 +466,8 @@ def main():
                     ws2.cell(row=j, column=ws2_mocost995_col).font = Font(color="808080")
                     ws2.cell(row=j, column=ws2_actcostw995_col).font = Font(color="808080")
                     ws2.cell(row=j, column=ws2_actmargw995_col).font = Font(color="808080")
+                    commenttext = "Skipped Calculation, Water Treatment not subject to 995"
+                    ws2.cell(row=j, column=ws2_accrual_col).comment = Comment(commenttext, "JMai")
                 else:
 
                     temp_rate995 = "NOT SET"    #This is the T&D + 995 rate to be used for this job number. this can vary
@@ -470,7 +480,7 @@ def main():
                         ws2.cell(row=j, column=ws2_actcostw995_col).font = Font(color="808080")
                         ws2.cell(row=j, column=ws2_actmargw995_col).font = Font(color="808080")
 
-                    elif CALC995 == "NORMAL" and manhours:
+                    if manhours:
                         # There are manhours, so calculate the 995 costs in col s, by multiplying it against the area's key rate
                         for x in range(1, insertedkeyws.max_row + 1):
                             key_costcenter = insertedkeyws.cell(row=x, column=wskey_costcenter_col).value
@@ -492,7 +502,6 @@ def main():
                                         #accrual_formula = "='" + insertedmhws.title + "'!" + manhourcell.coordinate + "*('995 Key'!" + rate995.coordinate + "+ '995 Key'!" + rateTND.coordinate + ")"
 
                                         calculatedaccrual = temp_rate995 * manhourcell.value
-
 
                                 except:
                                     accrual_formula = "ERROR"
