@@ -334,8 +334,8 @@ def main():
         copyworksheet(wskey, insertedkeyws)  # copy data from the other worksheet
         copyworksheet(wsmh, insertedmhws, copyformatting=False)
         # add MH subtotal column in insertedmhws, this is needed for a static MH location so formulas don't break
-        insertedkeyws.insert_cols(5)
-        insertedkeyws.cell(row=1, column=5).value = "MH Subtotal"
+        insertedkeyws.insert_cols(16)
+        insertedkeyws.cell(row=1, column=16).value = "MH Subtotal"
 
         for cell in insertedmhws[1]:  # formats with colors and wraptext
             # start_color is background color, end_color is font color

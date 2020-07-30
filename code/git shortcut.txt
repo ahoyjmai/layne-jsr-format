@@ -5,5 +5,9 @@ shift-insert to paste
 compile exe
 cmd
 cd directory from explorer bar ie 
-	cd C:\Users\Jonathan.Mai\PycharmProjects\layne-jsr-format2\code
+
+##Copy this first
+cd C:\Users\Jonathan.Mai\PycharmProjects\layne-jsr-format2\code
+
+##Copy this second
 pyinstaller JSRformatter.py --onefile
