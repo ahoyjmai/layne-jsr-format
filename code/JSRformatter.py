@@ -40,7 +40,7 @@ unexpected additions to input spreadsheets will cause this script to malfunction
 equations are hard-coded in HEADERMAP
 
 version Notes
-v1.8b
+v1.8c
  Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
  MH report, now it sums multiple area region codes if present. 995 MH are negative now. Fixed bugs regarding 995 calc
  w MH. In alternate 995 calculation (for month end) only manhours and est accruals are calculated. N/A is assigned to
@@ -73,8 +73,8 @@ Source code available at https://github.com/ahoyjmai/layne-jsr-format.git
 
 Written by Jonathan Mai on 8/7/2019
 """
-Last_Updated = "Last Updated 7/6/2020"
-Version_Number = "Version v1.8b"
+Last_Updated = "Last Updated 7/30/2020"
+Version_Number = "Version v1.8c"
 
 
 def main():
