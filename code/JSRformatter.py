@@ -40,11 +40,12 @@ unexpected additions to input spreadsheets will cause this script to malfunction
 equations are hard-coded in HEADERMAP
 
 version Notes
-v1.8c
+v1.8d
  Added 995 total column and 995 total margin.  Fix issue where only one 995 area region supervision was expected in
  MH report, now it sums multiple area region codes if present. 995 MH are negative now. Fixed bugs regarding 995 calc
  w MH. In alternate 995 calculation (for month end) only manhours and est accruals are calculated. N/A is assigned to
- estimated month, estimated total, and estimated margin
+ estimated month, estimated total, and estimated margin.
+ added flag for forecast margin monthly change
 
 v1.7
  fixed 995 calcs, user has option to skip 995 calcs or col R. Changed regions to Central/NE/SE/Central, eliminated SW
@@ -548,6 +549,7 @@ def main():
         if i <= 3:  # skip the first 3 rows
             continue
         mark_if_actual_cost_is_greater_than_forecasted_cost(row)
+        check_forecast_margin_change(row)
         clean_sales_vs_billings_values(row)
         mark_large_POC_receivables(row)
         mark_billings_over_contract_value(row)
@@ -940,6 +942,20 @@ def mark_if_actual_cost_is_greater_than_forecasted_cost(row):
         return False
 
 
+def check_forecast_margin_change(row):
+    # AP is Forecast margin monthly change
+    FCSTCHANGECOL="AP"
+    CONTRTYPECOL = "A"
+    if row[xcol(FCSTCHANGECOL)].value is not None:
+        if abs(row[xcol(FCSTCHANGECOL)].value) > 20000:
+            if row[xcol(CONTRTYPECOL)].value in ["LJ", "FJ"]:
+                row[xcol(FCSTCHANGECOL)].fill = Redfillstyle
+                commenttext = "$20k+ margin change. Confirm costs are in correct cost buckets, or adjust E-1 forecast."
+                row[xcol(FCSTCHANGECOL)].comment = Comment(commenttext, "JMai")
+        return True
+    else:
+        return False
+
 def clean_sales_vs_billings_values(row):
     # AE and AF is billings vs sales, delete if negative
     BVSCOL=["AE", "AF"]
@@ -985,7 +1001,7 @@ def mark_billings_over_contract_value(row):
         if row[xcol(CONVALCOL)].value > 5:
             # ignore if contract value is tiny
             if row[xcol(BILLCOL)].value > row[xcol(CONVALCOL)].value + threshold:
-                commenttext = "Billings exceed Contract Value. Change order needed."
+                commenttext = "Billing exceed Contract Value. Change order needed if there are more billings."
                 row[xcol(CONVALCOL)].comment = Comment(commenttext, "JMai")
                 row[xcol(CONVALCOL)].fill = Redfillstyle
                 return True
@@ -993,7 +1009,7 @@ def mark_billings_over_contract_value(row):
                 xcol(CONVALCOL)].value + threshold:
                 # apply level 2 only if it is a CJ job
                 if row[xcol(CONTRTYPECOL)].value == "CJ":
-                    commenttext = "Revenue accrual based on actual costs is lower than an 18% margin. Possible CO needed."
+                    commenttext = "Revenue accrual (based on actual costs) is below 18% margin. Possible CO needed."
                     row[xcol(CONVALCOL)].comment = Comment(commenttext, "JMai")
                     row[xcol(CONVALCOL)].fill = Pinkfillstyle
                     return True
